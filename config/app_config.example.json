@@ -1,0 +1,6 @@
+{
+  "device_udid": "REPLACE_WITH_ADB_SERIAL",
+  "feishu_package": "com.ss.android.lark",
+  "device_access_enabled": false,
+  "real_actions_enabled": false
+}
