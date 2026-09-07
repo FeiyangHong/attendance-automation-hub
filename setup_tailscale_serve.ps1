@@ -9,8 +9,27 @@ $ErrorActionPreference = "Stop"
 
 $tailscale = Get-Command tailscale.exe -ErrorAction SilentlyContinue
 if ($null -eq $tailscale) {
-    $installed = Join-Path $env:ProgramFiles "Tailscale\tailscale.exe"
-    if (-not (Test-Path -LiteralPath $installed -PathType Leaf)) {
+    $candidates = @(
+        (Join-Path $env:ProgramFiles "Tailscale\tailscale.exe"),
+        (Join-Path ${env:ProgramFiles(x86)} "Tailscale\tailscale.exe"),
+        (Join-Path $env:LOCALAPPDATA "Tailscale\tailscale.exe")
+    )
+    $service = Get-CimInstance Win32_Service -Filter "Name='Tailscale'" -ErrorAction SilentlyContinue
+    if ($null -ne $service) {
+        $match = [regex]::Match([string]$service.PathName, '^(?:"([^"]+)"|(\S+))')
+        $serviceExe = if ($match.Groups[1].Success) {
+            $match.Groups[1].Value
+        } else {
+            $match.Groups[2].Value
+        }
+        if (-not [string]::IsNullOrWhiteSpace($serviceExe)) {
+            $candidates = @((Join-Path (Split-Path -Parent $serviceExe) "tailscale.exe")) + $candidates
+        }
+    }
+    $installed = $candidates | Where-Object {
+        $_ -and (Test-Path -LiteralPath $_ -PathType Leaf)
+    } | Select-Object -First 1
+    if ([string]::IsNullOrWhiteSpace([string]$installed)) {
         throw "Tailscale is not installed. Install it and complete account login first."
     }
     $tailscaleExe = $installed

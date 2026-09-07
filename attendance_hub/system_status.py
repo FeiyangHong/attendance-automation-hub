@@ -37,6 +37,37 @@ def _find_scrcpy_tool(name: str) -> str | None:
     return str(matches[0]) if matches else None
 
 
+def _find_tailscale() -> str | None:
+    direct = shutil.which("tailscale")
+    if direct:
+        return direct
+    candidates = [
+        Path(os.environ.get("ProgramFiles", "")) / "Tailscale" / "tailscale.exe",
+        Path(os.environ.get("ProgramFiles(x86)", "")) / "Tailscale" / "tailscale.exe",
+        Path(os.environ.get("LOCALAPPDATA", "")) / "Tailscale" / "tailscale.exe",
+    ]
+    if os.name == "nt":
+        try:
+            import winreg
+
+            with winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                r"SYSTEM\CurrentControlSet\Services\Tailscale",
+            ) as key:
+                image_path = str(winreg.QueryValueEx(key, "ImagePath")[0]).strip()
+            if image_path.startswith('"'):
+                executable = image_path.split('"', 2)[1]
+            else:
+                executable = image_path.split(" ", 1)[0]
+            candidates.insert(
+                0,
+                Path(os.path.expandvars(executable)).parent / "tailscale.exe",
+            )
+        except (OSError, ValueError):
+            pass
+    return next((str(path) for path in candidates if path.is_file()), None)
+
+
 def _device_status() -> dict[str, Any]:
     config = load_app_config()
     result: dict[str, Any] = {
@@ -111,7 +142,7 @@ $info = Get-ScheduledTaskInfo -TaskName '{safe_name}'
 
 
 def _tailscale_status() -> dict[str, Any]:
-    executable = shutil.which("tailscale")
+    executable = _find_tailscale()
     if not executable:
         return {"installed": False, "online": False}
     try:
@@ -119,6 +150,8 @@ def _tailscale_status() -> dict[str, Any]:
             [executable, "status", "--json"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=6,
             creationflags=CREATE_NO_WINDOW,
         )
