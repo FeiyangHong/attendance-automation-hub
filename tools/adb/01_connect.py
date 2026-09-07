@@ -1,10 +1,16 @@
+# ruff: noqa: E402
 import time
+import sys
 from pathlib import Path
+
+PROJECT_DIR = Path(__file__).resolve().parents[2]
+if str(PROJECT_DIR) not in sys.path:
+    sys.path.insert(0, str(PROJECT_DIR))
 
 from appium import webdriver
 from appium.options.android import UiAutomator2Options
 
-from app_config import load_app_config, require_device_access
+from attendance_hub.core.app_config import load_app_config, require_device_access
 
 
 APP_CONFIG = load_app_config()

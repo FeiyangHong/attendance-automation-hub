@@ -4,10 +4,14 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-$ProjectDir = (Resolve-Path -LiteralPath $PSScriptRoot).Path
-$OutputPath = [System.IO.Path]::GetFullPath((Join-Path $ProjectDir $OutputFile))
-if ([System.IO.Path]::GetDirectoryName($OutputPath) -ne $ProjectDir) {
-    throw "Release archive must be written directly inside the project directory."
+$ProjectDir = [System.IO.Path]::GetFullPath(
+    (Join-Path $PSScriptRoot "..\..")
+)
+$DistDir = Join-Path $ProjectDir "dist"
+New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
+$OutputPath = [System.IO.Path]::GetFullPath((Join-Path $DistDir $OutputFile))
+if ([System.IO.Path]::GetDirectoryName($OutputPath) -ne $DistDir) {
+    throw "Release archive must be written directly inside the dist directory."
 }
 if ([System.IO.Path]::GetExtension($OutputPath) -ne ".zip") {
     throw "Release archive must use a .zip extension."

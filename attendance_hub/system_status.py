@@ -9,9 +9,9 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
-from app_config import load_app_config
-from attendance_history import recent_records
-from daily_plans import day_plan
+from .core.app_config import load_app_config
+from .core.attendance_history import recent_records
+from .core.daily_plans import day_plan
 
 from .calendar_service import day_status, next_execution_date
 from .settings import RemoteSettings

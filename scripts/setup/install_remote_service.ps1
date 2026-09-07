@@ -5,7 +5,9 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$ProjectDir = $PSScriptRoot
+$ProjectDir = [System.IO.Path]::GetFullPath(
+    (Join-Path $PSScriptRoot "..\..")
+)
 $Runner = Join-Path $ProjectDir "run_remote_service.ps1"
 $PythonExe = Join-Path $ProjectDir ".venv\Scripts\python.exe"
 $RemoteConfig = Join-Path $ProjectDir "config\remote_config.json"

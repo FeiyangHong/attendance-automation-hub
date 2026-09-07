@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 
-PROJECT_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_CACHE_FILE = PROJECT_DIR / "config" / "official_holidays.json"
 SEARCH_API = "https://sousuo.www.gov.cn/search-gov/data"
 SEARCH_REFERER = "https://sousuo.www.gov.cn/zcwjk/policyDocumentLibrary"

@@ -51,7 +51,8 @@ class RemoteSettings:
     def require_authentication_config(self) -> None:
         if not self.password_salt or not self.password_hash:
             raise RuntimeError(
-                "Remote login is not configured. Run configure_remote.ps1 first."
+                "Remote login is not configured. Run "
+                "scripts/setup/configure_remote.ps1 first."
             )
 
 

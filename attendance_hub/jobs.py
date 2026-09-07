@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from app_config import load_app_config
+from .core.app_config import load_app_config
 
 from .settings import RemoteSettings
 from .store import RemoteStore
@@ -315,7 +315,8 @@ class JobManager:
             "clock_out": common + [str(project / "run_clock_out.ps1"), "-Source", "remote"],
             "dry_run_clock_in": common + [str(project / "run_random.ps1"), "-TestMode", "-Immediate"],
             "dry_run_clock_out": common + [str(project / "run_clock_out.ps1"), "-TestMode", "-Source", "remote"],
-            "diagnostic": common + [str(project / "diagnose_environment.ps1")],
+            "diagnostic": common
+            + [str(project / "scripts" / "operations" / "diagnose_environment.ps1")],
             "task_enable": [powershell, "-NoProfile", "-NonInteractive", "-Command", f"Enable-ScheduledTask -TaskName '{self.settings.task_name.replace(chr(39), chr(39) * 2)}' | Out-Null"],
             "task_disable": [powershell, "-NoProfile", "-NonInteractive", "-Command", f"Disable-ScheduledTask -TaskName '{self.settings.task_name.replace(chr(39), chr(39) * 2)}' | Out-Null"],
         }
@@ -339,7 +340,12 @@ class JobManager:
             "-ExecutionPolicy",
             "Bypass",
             "-File",
-            str(self.settings.project_dir / "start_scrcpy.ps1"),
+            str(
+                self.settings.project_dir
+                / "scripts"
+                / "operations"
+                / "start_scrcpy.ps1"
+            ),
         ]
         process = subprocess.Popen(
             command,

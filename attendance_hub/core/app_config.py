@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-PROJECT_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG_FILE = PROJECT_DIR / "config" / "app_config.json"
 
 

@@ -20,8 +20,12 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from app_config import load_app_config
-from attendance_history import events_for_date, month_records, record_for_date
+from .core.app_config import load_app_config
+from .core.attendance_history import (
+    events_for_date,
+    month_records,
+    record_for_date,
+)
 
 from .calendar_service import (
     month_view,

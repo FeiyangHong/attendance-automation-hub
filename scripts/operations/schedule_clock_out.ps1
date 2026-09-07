@@ -7,7 +7,9 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$ProjectDir = $PSScriptRoot
+$ProjectDir = [System.IO.Path]::GetFullPath(
+    (Join-Path $PSScriptRoot "..\..")
+)
 $RunnerScript = Join-Path $ProjectDir "run_clock_out.ps1"
 $PowerShellExe = Join-Path $env:SystemRoot `
     "System32\WindowsPowerShell\v1.0\powershell.exe"

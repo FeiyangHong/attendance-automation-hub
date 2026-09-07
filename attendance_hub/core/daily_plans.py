@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 
-PROJECT_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_PLAN_FILE = PROJECT_DIR / "config" / "daily_plans.json"
 
 

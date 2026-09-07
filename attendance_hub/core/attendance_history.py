@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 
-PROJECT_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_DB_FILE = PROJECT_DIR / "data" / "attendance_history.db"
 DEFAULT_LOG_ROOT = PROJECT_DIR / "logs"
 

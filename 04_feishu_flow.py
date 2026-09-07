@@ -9,8 +9,15 @@ from appium import webdriver
 from appium.options.android import UiAutomator2Options
 from appium.webdriver.common.appiumby import AppiumBy
 
-from app_config import load_app_config, require_device_access, require_real_actions
-from attendance_history import record_confirmed, record_unconfirmed
+from attendance_hub.core.app_config import (
+    load_app_config,
+    require_device_access,
+    require_real_actions,
+)
+from attendance_hub.core.attendance_history import (
+    record_confirmed,
+    record_unconfirmed,
+)
 
 
 APP_CONFIG = load_app_config()

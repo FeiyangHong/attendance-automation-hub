@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from app_config import load_app_config
+from .core.app_config import load_app_config
 
 from .settings import RemoteSettings
 
@@ -41,7 +41,12 @@ def synchronize_plan_tasks(
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        str(settings.project_dir / "sync_daily_plan.ps1"),
+        str(
+            settings.project_dir
+            / "scripts"
+            / "operations"
+            / "sync_daily_plan.ps1"
+        ),
         "-PlanDate",
         target_date,
         "-ClockIn",

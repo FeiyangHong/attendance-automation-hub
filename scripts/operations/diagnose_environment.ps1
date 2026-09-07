@@ -1,7 +1,9 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Continue"
 
-$ProjectDir = $PSScriptRoot
+$ProjectDir = [System.IO.Path]::GetFullPath(
+    (Join-Path $PSScriptRoot "..\..")
+)
 $Failures = 0
 $Warnings = 0
 
@@ -43,15 +45,16 @@ Write-Host ""
 
 $requiredFiles = @(
     "04_feishu_flow.py",
-    "attendance_history.py",
-    "daily_plans.py",
-    "holiday_sync.py",
+    "attendance_hub\core\app_config.py",
+    "attendance_hub\core\attendance_history.py",
+    "attendance_hub\core\daily_plans.py",
+    "attendance_hub\core\holiday_sync.py",
     "feishu_control_panel.pyw",
     "run_random.ps1",
     "run_clock_out.ps1",
-    "schedule_clock_out.ps1",
-    "sync_daily_plan.ps1",
-    "install_daily_task.ps1",
+    "scripts\operations\schedule_clock_out.ps1",
+    "scripts\operations\sync_daily_plan.ps1",
+    "scripts\setup\install_daily_task.ps1",
     "launch_control_panel.vbs",
     "config\calendar_overrides.json",
     "config\daily_plans.json",
@@ -124,7 +127,7 @@ if (Test-Path -LiteralPath $venvPython -PathType Leaf) {
     }
 }
 else {
-    Write-Result "FAIL" ".venv is missing; create it as described in README_MIGRATION_QUICK.md."
+    Write-Result "FAIL" ".venv is missing; create it as described in docs/MIGRATION.md."
 }
 
 Write-Host ""

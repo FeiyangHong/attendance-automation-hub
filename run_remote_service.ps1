@@ -12,7 +12,7 @@ if (-not (Test-Path -LiteralPath $PythonExe -PathType Leaf)) {
     throw "Python environment not found: $PythonExe"
 }
 if (-not (Test-Path -LiteralPath $RemoteConfig -PathType Leaf)) {
-    throw "Remote configuration not found. Run configure_remote.ps1 first."
+    throw "Remote configuration not found. Run scripts/setup/configure_remote.ps1 first."
 }
 $config = Get-Content -LiteralPath $RemoteConfig -Raw -Encoding UTF8 | ConvertFrom-Json
 if ([string]$config.bind_host -notin @("127.0.0.1", "::1", "localhost")) {

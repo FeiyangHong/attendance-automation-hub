@@ -16,13 +16,15 @@ py -3.10 -m venv .venv
 从旧仓库导入日历、计划和历史（只读旧仓库，且导入后安全锁仍关闭）：
 
 ```powershell
-.\migrate_from_legacy.ps1 -LegacyPath E:\PhoneRemote\feishu_dryrun -IncludeLogs
+.\scripts\migration\migrate_from_legacy.ps1 `
+    -LegacyPath E:\PhoneRemote\feishu_dryrun -IncludeLogs
 ```
 
 配置网页登录密码和手机，但暂不允许真实打卡：
 
 ```powershell
-.\configure_remote.ps1 -DeviceUdid 你的ADB序列号 -TailscaleUser 你的登录邮箱 -EnableDevice
+.\scripts\setup\configure_remote.ps1 `
+    -DeviceUdid 你的ADB序列号 -TailscaleUser 你的登录邮箱 -EnableDevice
 ```
 
 本机试运行 Web：
@@ -31,7 +33,27 @@ py -3.10 -m venv .venv
 .\run_remote_service.ps1
 ```
 
-浏览器打开 `http://127.0.0.1:8765`。确认无误后参照 [远程控制安装与使用](REMOTE_CONTROL_README.md) 配置 Tailscale；最终切换步骤见 [迁移简明指南](README_MIGRATION_QUICK.md)。
+浏览器打开 `http://127.0.0.1:8765`。确认无误后参照
+[远程控制安装与使用](docs/REMOTE_CONTROL.md) 配置 Tailscale；最终切换步骤见
+[迁移简明指南](docs/MIGRATION.md)。
+
+## 仓库结构
+
+```text
+attendance_hub/       Python 应用与共享核心模块
+config/               示例配置及本机运行配置
+docs/                 安装、迁移和设计文档
+scripts/
+  setup/              首次配置、任务和 Tailscale 安装
+  operations/         诊断、日计划同步、scrcpy 和临时任务
+  migration/          迁移、切换与回滚
+  release/            发布包构建
+tests/                自动测试
+tools/adb/            ADB 探测工具
+web/                  Web 模板和静态资源
+```
+
+根目录只保留稳定运行入口和桌面程序，保证既有计划任务与快捷方式继续有效。
 
 ## 安全边界
 
@@ -46,9 +68,9 @@ py -3.10 -m venv .venv
 ## 常用入口
 
 - 桌面面板：双击 `launch_control_panel.vbs`
-- 环境诊断：`.\diagnose_environment.ps1`
+- 环境诊断：`.\scripts\operations\diagnose_environment.ps1`
 - Web 服务：`.\run_remote_service.ps1`
 - 测试：`.\.venv\Scripts\python.exe -m pytest`
-- 紧急回滚：`.\rollback_to_legacy.ps1 -ConfirmRollback ROLLBACK`
+- 紧急回滚：`.\scripts\migration\rollback_to_legacy.ps1 -ConfirmRollback ROLLBACK`
 
 运行数据、密码配置、截图、日志和 `.venv` 均被 Git/发布包排除。

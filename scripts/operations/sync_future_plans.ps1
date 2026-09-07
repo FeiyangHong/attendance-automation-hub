@@ -4,9 +4,11 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-$ProjectDir = $PSScriptRoot
+$ProjectDir = [System.IO.Path]::GetFullPath(
+    (Join-Path $PSScriptRoot "..\..")
+)
 $PlanFile = Join-Path $ProjectDir "config\daily_plans.json"
-$SyncScript = Join-Path $ProjectDir "sync_daily_plan.ps1"
+$SyncScript = Join-Path $PSScriptRoot "sync_daily_plan.ps1"
 if (-not (Test-Path -LiteralPath $PlanFile -PathType Leaf)) { exit 0 }
 $data = Get-Content -LiteralPath $PlanFile -Raw -Encoding UTF8 | ConvertFrom-Json
 foreach ($property in $data.plans.PSObject.Properties) {

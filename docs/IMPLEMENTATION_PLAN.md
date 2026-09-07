@@ -134,18 +134,19 @@ Tailscale 私有网络（HTTPS）
 ## 6. 计划新增文件
 
 ```text
-remote_server.py                 FastAPI入口
-remote_jobs.py                   队列、全局锁、进程和状态管理
-remote_auth.py                   登录、会话和权限验证
-remote_models.py                 API数据模型
-remote_store.py                  任务与审计SQLite访问
-web\templates\                  页面模板
-web\static\                     CSS、JavaScript和图标
-config\remote_config.example.json
-install_remote_service.ps1       安装随系统启动的远程服务
-uninstall_remote_service.ps1     停用远程服务
-run_remote_service.ps1           启动及日志封装
-REMOTE_CONTROL_README.md         安装和使用说明
+attendance_hub/server.py         FastAPI入口
+attendance_hub/jobs.py           队列、全局锁、进程和状态管理
+attendance_hub/security.py       登录、会话和权限验证
+attendance_hub/store.py          任务与审计SQLite访问
+attendance_hub/core/             配置、日计划、节假日和历史服务
+web/templates/                   页面模板
+web/static/                      CSS和JavaScript
+config/remote_config.example.json
+scripts/setup/                   配置、服务和计划任务安装
+scripts/operations/              诊断、同步和手机画面操作
+scripts/migration/               迁移、切换和回滚
+run_remote_service.ps1           稳定的服务启动入口
+docs/REMOTE_CONTROL.md           安装和使用说明
 ```
 
 现有文件尽量继续复用：
@@ -154,10 +155,10 @@ REMOTE_CONTROL_README.md         安装和使用说明
 04_feishu_flow.py
 run_random.ps1
 run_clock_out.ps1
-sync_daily_plan.ps1
-daily_plans.py
-attendance_history.py
-holiday_sync.py
+scripts/operations/sync_daily_plan.ps1
+attendance_hub/core/daily_plans.py
+attendance_hub/core/attendance_history.py
+attendance_hub/core/holiday_sync.py
 feishu_control_panel.pyw
 ```
 

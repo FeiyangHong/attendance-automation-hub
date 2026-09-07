@@ -15,8 +15,8 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-from app_config import load_app_config
-from attendance_history import (
+from attendance_hub.core.app_config import load_app_config
+from attendance_hub.core.attendance_history import (
     events_for_date,
     import_existing_logs,
     month_records,
@@ -24,16 +24,29 @@ from attendance_history import (
     record_for_date,
     source_label,
 )
-from daily_plans import day_plan, load_daily_plans, month_plans, set_day_plan
-from holiday_sync import HolidaySyncError, load_official_calendar, sync_year
+from attendance_hub.core.daily_plans import (
+    day_plan,
+    load_daily_plans,
+    month_plans,
+    set_day_plan,
+)
+from attendance_hub.core.holiday_sync import (
+    HolidaySyncError,
+    load_official_calendar,
+    sync_year,
+)
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
 RUNNER_SCRIPT = PROJECT_DIR / "run_random.ps1"
-INSTALL_SCRIPT = PROJECT_DIR / "install_daily_task.ps1"
+INSTALL_SCRIPT = PROJECT_DIR / "scripts" / "setup" / "install_daily_task.ps1"
 CLOCK_OUT_RUNNER_SCRIPT = PROJECT_DIR / "run_clock_out.ps1"
-CLOCK_OUT_SCHEDULE_SCRIPT = PROJECT_DIR / "schedule_clock_out.ps1"
-DAILY_PLAN_SYNC_SCRIPT = PROJECT_DIR / "sync_daily_plan.ps1"
+CLOCK_OUT_SCHEDULE_SCRIPT = (
+    PROJECT_DIR / "scripts" / "operations" / "schedule_clock_out.ps1"
+)
+DAILY_PLAN_SYNC_SCRIPT = (
+    PROJECT_DIR / "scripts" / "operations" / "sync_daily_plan.ps1"
+)
 CLOCK_OUT_RESULT_FILE = PROJECT_DIR / "config" / "clock_out_last_result.json"
 MORNING_PLAN_FILE = PROJECT_DIR / "config" / "morning_current_plan.json"
 LOG_ROOT = PROJECT_DIR / "logs"
@@ -1669,7 +1682,7 @@ class ControlPanel:
         if not APP_CONFIG.device_access_enabled:
             messagebox.showerror("安全锁已启用", "新仓库当前禁止访问手机。")
             return
-        launcher = PROJECT_DIR / "start_scrcpy.ps1"
+        launcher = PROJECT_DIR / "scripts" / "operations" / "start_scrcpy.ps1"
         if not launcher.is_file():
             messagebox.showerror("文件缺失", str(launcher))
             return

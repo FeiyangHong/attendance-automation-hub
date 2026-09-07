@@ -3,7 +3,9 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$ProjectDir = $PSScriptRoot
+$ProjectDir = [System.IO.Path]::GetFullPath(
+    (Join-Path $PSScriptRoot "..\..")
+)
 $AppConfigFile = Join-Path $ProjectDir "config\app_config.json"
 if (-not (Test-Path -LiteralPath $AppConfigFile -PathType Leaf)) {
     throw "Device configuration is missing."

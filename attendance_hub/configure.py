@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 
-from app_config import DEFAULT_CONFIG_FILE
+from .core.app_config import DEFAULT_CONFIG_FILE
 
 from .security import new_password_record
 from .settings import DEFAULT_CONFIG_FILE as REMOTE_CONFIG_FILE

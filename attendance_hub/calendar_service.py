@@ -5,9 +5,9 @@ import json
 from datetime import date, datetime, time, timedelta
 from typing import Any
 
-from attendance_history import month_records, record_for_date
-from daily_plans import day_plan, month_plans, set_day_plan
-from holiday_sync import load_official_calendar, sync_year
+from .core.attendance_history import month_records, record_for_date
+from .core.daily_plans import day_plan, month_plans, set_day_plan
+from .core.holiday_sync import load_official_calendar, sync_year
 
 from .settings import PROJECT_DIR
 

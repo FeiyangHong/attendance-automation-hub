@@ -9,7 +9,9 @@ if ($ConfirmCutover -cne "CUTOVER") {
     throw "Cutover was not confirmed. Re-run with -ConfirmCutover CUTOVER."
 }
 
-$ProjectDir = $PSScriptRoot
+$ProjectDir = [System.IO.Path]::GetFullPath(
+    (Join-Path $PSScriptRoot "..\..")
+)
 $AppConfigFile = Join-Path $ProjectDir "config\app_config.json"
 $RemoteConfigFile = Join-Path $ProjectDir "config\remote_config.json"
 $PythonExe = Join-Path $ProjectDir ".venv\Scripts\python.exe"
@@ -44,9 +46,10 @@ New-Item -ItemType Directory -Force -Path $BackupDir | Out-Null
 $snapshot | ConvertTo-Json | Set-Content -LiteralPath $BackupFile -Encoding UTF8
 
 try {
-    & (Join-Path $ProjectDir "install_daily_task.ps1") -TaskName $NewTaskName
-    & (Join-Path $ProjectDir "install_remote_service.ps1")
-    & (Join-Path $ProjectDir "sync_future_plans.ps1")
+    & (Join-Path $ProjectDir "scripts\setup\install_daily_task.ps1") `
+        -TaskName $NewTaskName
+    & (Join-Path $ProjectDir "scripts\setup\install_remote_service.ps1")
+    & (Join-Path $ProjectDir "scripts\operations\sync_future_plans.ps1")
 
     $newTask = Get-ScheduledTask -TaskName $NewTaskName -ErrorAction Stop
     $newAction = [string]$newTask.Actions[0].Arguments

@@ -12,7 +12,10 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$PythonExe = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+$ProjectDir = [System.IO.Path]::GetFullPath(
+    (Join-Path $PSScriptRoot "..\..")
+)
+$PythonExe = Join-Path $ProjectDir ".venv\Scripts\python.exe"
 if (-not (Test-Path -LiteralPath $PythonExe -PathType Leaf)) {
     throw "Create the project virtual environment first: $PythonExe"
 }
@@ -33,5 +36,12 @@ if ($ConfirmProduction) {
     $arguments += @("--confirm-production", $ConfirmProduction)
 }
 
-& $PythonExe @arguments
-exit $LASTEXITCODE
+Push-Location $ProjectDir
+try {
+    & $PythonExe @arguments
+    $exitCode = $LASTEXITCODE
+}
+finally {
+    Pop-Location
+}
+exit $exitCode

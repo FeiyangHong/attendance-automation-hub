@@ -36,8 +36,13 @@ def test_remote_diagnostic_is_blocked_while_isolated(tmp_path, monkeypatch):
 
 def test_all_phone_entrypoints_use_the_same_device_mutex():
     expected = "Local\\AttendanceAutomationHubDevice"
-    for name in ("run_random.ps1", "run_clock_out.ps1", "start_scrcpy.ps1"):
-        assert expected in (PROJECT_DIR / name).read_text(encoding="utf-8")
+    entrypoints = (
+        PROJECT_DIR / "run_random.ps1",
+        PROJECT_DIR / "run_clock_out.ps1",
+        PROJECT_DIR / "scripts" / "operations" / "start_scrcpy.ps1",
+    )
+    for entrypoint in entrypoints:
+        assert expected in entrypoint.read_text(encoding="utf-8")
 
 
 def test_failure_classification_is_specific():

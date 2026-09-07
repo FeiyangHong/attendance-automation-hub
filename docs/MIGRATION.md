@@ -31,7 +31,7 @@ appium.cmd --version
 ```powershell
 py -3.10 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\diagnose_environment.ps1
+.\scripts\operations\diagnose_environment.ps1
 ```
 
 手机开启“开发者选项 → USB 调试”，连接后运行 `adb devices -l`，记录状态为 `device` 的序列号。新手机先登录目标飞书账号并确认能进入“工作台 → 假勤”。
@@ -39,8 +39,8 @@ py -3.10 -m venv .venv
 ## 3. 安全迁移与测试
 
 ```powershell
-.\migrate_from_legacy.ps1 -LegacyPath E:\PhoneRemote\feishu_dryrun -IncludeLogs
-.\configure_remote.ps1 -DeviceUdid 序列号 -TailscaleUser 你的邮箱 -EnableDevice
+.\scripts\migration\migrate_from_legacy.ps1 -LegacyPath E:\PhoneRemote\feishu_dryrun -IncludeLogs
+.\scripts\setup\configure_remote.ps1 -DeviceUdid 序列号 -TailscaleUser 你的邮箱 -EnableDevice
 .\run_remote_service.ps1
 ```
 
@@ -51,8 +51,8 @@ py -3.10 -m venv .venv
 在电脑和远程安卓/电脑安装 Tailscale，登录同一 tailnet。在打卡电脑的管理员 PowerShell 运行：
 
 ```powershell
-.\setup_tailscale_serve.ps1
-.\install_remote_service.ps1
+.\scripts\setup\setup_tailscale_serve.ps1
+.\scripts\setup\install_remote_service.ps1
 ```
 
 通过脚本显示的 `https://电脑名.网络名.ts.net` 访问。不要使用 Funnel，也不要把 8765、4723 或 ADB 端口映射到公网。
@@ -62,14 +62,14 @@ py -3.10 -m venv .venv
 确认新仓库全部状态正常后才运行：
 
 ```powershell
-.\configure_remote.ps1 -DeviceUdid 序列号 -TailscaleUser 你的邮箱 -EnableDevice -EnableRealActions -ConfirmProduction CUTOVER
-.\cutover_to_hub.ps1 -ConfirmCutover CUTOVER
+.\scripts\setup\configure_remote.ps1 -DeviceUdid 序列号 -TailscaleUser 你的邮箱 -EnableDevice -EnableRealActions -ConfirmProduction CUTOVER
+.\scripts\migration\cutover_to_hub.ps1 -ConfirmCutover CUTOVER
 ```
 
 脚本会先安装并验证新任务，随后只停用旧每日任务，不删除旧仓库。需要恢复时：
 
 ```powershell
-.\rollback_to_legacy.ps1 -ConfirmRollback ROLLBACK
+.\scripts\migration\rollback_to_legacy.ps1 -ConfirmRollback ROLLBACK
 ```
 
 发布压缩包应包含仓库源码、`config\*.example.json`、诊断/安装/迁移/回滚脚本和文档；不包含 `.venv`、真实配置、日志、截图、数据库或账号资料。
