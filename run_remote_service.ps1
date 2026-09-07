@@ -21,6 +21,18 @@ if ([string]$config.bind_host -notin @("127.0.0.1", "::1", "localhost")) {
 
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 $env:PYTHONUNBUFFERED = "1"
-& $PythonExe -m attendance_hub.server 2>&1 |
-    Tee-Object -FilePath (Join-Path $LogDir "$((Get-Date).ToString('yyyy-MM-dd')).log") -Append
-exit $LASTEXITCODE
+$serviceLog = Join-Path $LogDir "$((Get-Date).ToString('yyyy-MM-dd')).log"
+$previousErrorActionPreference = $ErrorActionPreference
+try {
+    # Windows PowerShell 5.1 wraps native stderr as non-terminating
+    # ErrorRecord objects. Uvicorn writes normal startup messages to stderr,
+    # so allow those records to flow into the log instead of stopping here.
+    $ErrorActionPreference = "Continue"
+    & $PythonExe -m attendance_hub.server 2>&1 |
+        Tee-Object -FilePath $serviceLog -Append
+    $serviceExitCode = $LASTEXITCODE
+}
+finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+}
+exit $serviceExitCode
