@@ -1,2 +1,6 @@
 Appium-Python-Client==5.3.1
 selenium==4.36.0
+fastapi==0.128.8
+uvicorn==0.39.0
+Jinja2==3.1.6
+python-multipart==0.0.20

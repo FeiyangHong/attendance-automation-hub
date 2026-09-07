@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>登录 · Attendance Automation Hub</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="login-body">
+  <main class="login-card">
+    <div class="brand-mark">AH</div>
+    <p class="eyebrow">PRIVATE CONTROL</p>
+    <h1>考勤自动化中心</h1>
+    <p class="muted">此页面只应通过本机或Tailscale私有网络访问。</p>
+    {% if error %}<div class="alert danger">{{ error }}</div>{% endif %}
+    <form method="post" action="/login" class="login-form">
+      <label>用户名<input name="username" autocomplete="username" required autofocus></label>
+      <label>密码<input type="password" name="password" autocomplete="current-password" required></label>
+      <button class="primary wide" type="submit">安全登录</button>
+    </form>
+  </main>
+</body>
+</html>

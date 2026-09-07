@@ -1,0 +1,16 @@
+{
+  "bind_host": "127.0.0.1",
+  "port": 8765,
+  "admin_username": "admin",
+  "password_salt": "generated-by-configure-script",
+  "password_hash": "generated-by-configure-script",
+  "session_hours": 12,
+  "cookie_secure": false,
+  "trusted_hosts": ["127.0.0.1", "localhost", "*.ts.net"],
+  "allowed_tailscale_users": [],
+  "task_name": "Attendance Hub Morning Clock-In",
+  "planned_clock_out_prefix": "Attendance Hub Planned Clock-Out ",
+  "remote_service_task_name": "Attendance Automation Hub Web",
+  "duplicate_window_seconds": 45,
+  "max_job_seconds": 420
+}

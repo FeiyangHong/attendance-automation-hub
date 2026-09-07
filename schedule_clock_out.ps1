@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$RunAt,
-    [string]$TaskName = "Feishu One-Time Clock-Out"
+    [string]$TaskName = "Attendance Hub One-Time Clock-Out"
 )
 
 Set-StrictMode -Version Latest

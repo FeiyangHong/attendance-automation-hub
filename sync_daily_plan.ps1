@@ -35,7 +35,7 @@ function Sync-PlannedTask {
         [AllowEmptyString()][string]$TimeText
     )
 
-    $taskName = "Feishu Planned $Kind $PlanDate"
+    $taskName = "Attendance Hub Planned $Kind $PlanDate"
     $existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
     if ([string]::IsNullOrWhiteSpace($TimeText)) {
         if ($null -ne $existingTask) {
@@ -119,7 +119,7 @@ Sync-PlannedTask -Kind "Clock-In" -TimeText $ClockIn
 Sync-PlannedTask -Kind "Clock-Out" -TimeText $ClockOut
 
 if (-not [string]::IsNullOrWhiteSpace($ClockOut)) {
-    $legacyTaskName = "Feishu One-Time Clock-Out"
+    $legacyTaskName = "Attendance Hub One-Time Clock-Out"
     $legacyTask = Get-ScheduledTask -TaskName $legacyTaskName -ErrorAction SilentlyContinue
     if ($null -ne $legacyTask) {
         Unregister-ScheduledTask -TaskName $legacyTaskName -Confirm:$false

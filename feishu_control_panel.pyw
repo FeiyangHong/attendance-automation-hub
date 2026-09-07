@@ -40,9 +40,9 @@ LOG_ROOT = PROJECT_DIR / "logs"
 ARTIFACTS_DIR = PROJECT_DIR / "artifacts" / "flow_test"
 CALENDAR_FILE = PROJECT_DIR / "config" / "calendar_overrides.json"
 OFFICIAL_CALENDAR_FILE = PROJECT_DIR / "config" / "official_holidays.json"
-TASK_NAME = "Feishu Morning Clock-In"
-CLOCK_OUT_TASK_NAME = "Feishu One-Time Clock-Out"
-PLANNED_CLOCK_OUT_PREFIX = "Feishu Planned Clock-Out "
+TASK_NAME = "Attendance Hub Morning Clock-In"
+CLOCK_OUT_TASK_NAME = "Attendance Hub One-Time Clock-Out"
+PLANNED_CLOCK_OUT_PREFIX = "Attendance Hub Planned Clock-Out "
 APP_CONFIG = load_app_config()
 UDID = APP_CONFIG.display_udid
 
@@ -235,6 +235,8 @@ def appium_is_listening() -> bool:
 
 
 def adb_state() -> str:
+    if not APP_CONFIG.device_access_enabled:
+        return "disabled"
     if not ADB_EXE.is_file():
         return "adb missing"
 
@@ -1658,33 +1660,33 @@ class ControlPanel:
         threading.Thread(target=worker, daemon=True).start()
 
     def launch_phone_screen(self):
-        if self.scrcpy_process and self.scrcpy_process.poll() is None:
+        if scrcpy_is_running() or (
+            self.scrcpy_process and self.scrcpy_process.poll() is None
+        ):
             messagebox.showinfo("手机画面已打开", "scrcpy 窗口当前正在运行。")
             return
 
-        if not SCRCPY_EXE.is_file():
-            messagebox.showerror("未找到 scrcpy", str(SCRCPY_EXE))
+        if not APP_CONFIG.device_access_enabled:
+            messagebox.showerror("安全锁已启用", "新仓库当前禁止访问手机。")
             return
-
-        if adb_state() != "device":
-            messagebox.showerror("设备未连接", f"ADB 未检测到设备 {UDID}。")
+        launcher = PROJECT_DIR / "start_scrcpy.ps1"
+        if not launcher.is_file():
+            messagebox.showerror("文件缺失", str(launcher))
             return
 
         try:
             self.scrcpy_process = subprocess.Popen(
                 [
-                    str(SCRCPY_EXE),
-                    "--serial",
-                    UDID,
-                    "--window-title",
-                    "Phone Remote - Android",
-                    "--stay-awake",
+                    str(POWERSHELL_EXE),
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    str(launcher),
                 ],
-                cwd=str(SCRCPY_EXE.parent),
+                cwd=str(PROJECT_DIR),
                 stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                creationflags=CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP,
+                creationflags=CREATE_NEW_PROCESS_GROUP,
             )
             self.append_log("Interactive phone screen launched with scrcpy.")
             self.root.after(900, self.refresh_status)
@@ -1692,6 +1694,9 @@ class ControlPanel:
             messagebox.showerror("启动失败", str(exc))
 
     def start_appium(self):
+        if not APP_CONFIG.device_access_enabled:
+            messagebox.showerror("安全锁已启用", "新仓库当前禁止访问手机。")
+            return
         if appium_is_listening():
             messagebox.showinfo("Appium", "Appium 已经在 127.0.0.1:4723 运行。")
             return

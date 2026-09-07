@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>Attendance Automation Hub</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">ATTENDANCE AUTOMATION HUB</p>
+      <h1>远程控制中心</h1>
+    </div>
+    <div class="top-actions">
+      <span class="user-chip">{{ username }}</span>
+      <button id="refresh-button" class="ghost">刷新</button>
+      <button id="logout-button" class="ghost">退出</button>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    {% if not device_safety.device_access_enabled %}
+    <section class="alert warning">
+      开发安全锁已启用：新仓库无法连接手机，也不能执行真实打卡。
+    </section>
+    {% elif not device_safety.real_actions_enabled %}
+    <section class="alert warning">
+      设备访问已开启，但真实打卡仍被禁止；只允许诊断和安全测试。
+    </section>
+    {% endif %}
+
+    <section class="hero-grid">
+      <article class="panel status-panel">
+        <div class="section-heading"><div><p class="eyebrow">LIVE STATUS</p><h2>系统状态</h2></div><span id="updated-at" class="muted">--</span></div>
+        <div class="status-grid">
+          <div class="status-item"><span>安卓设备</span><strong id="device-state">读取中</strong></div>
+          <div class="status-item"><span>Appium</span><strong id="appium-state">读取中</strong></div>
+          <div class="status-item"><span>每日任务</span><strong id="task-state">读取中</strong></div>
+          <div class="status-item"><span>下次系统唤醒</span><strong id="next-wake">读取中</strong></div>
+          <div class="status-item"><span>下次实际打卡日</span><strong id="next-execution">读取中</strong></div>
+          <div class="status-item"><span>Tailscale</span><strong id="tailscale-state">读取中</strong></div>
+          <div class="status-item"><span>今日日历</span><strong id="calendar-state">读取中</strong></div>
+          <div class="status-item"><span>今日计划</span><strong id="today-plan">读取中</strong></div>
+        </div>
+      </article>
+
+      <article class="panel actions-panel">
+        <div class="section-heading"><div><p class="eyebrow">QUICK ACTIONS</p><h2>立即操作</h2></div></div>
+        <div class="action-grid">
+          <button class="action primary" data-job="clock_in">立即上班打卡</button>
+          <button class="action danger-button" data-job="clock_out">立即下班 / 更新</button>
+          <button class="action" data-job="dry_run_clock_in">上班安全测试</button>
+          <button class="action" data-job="dry_run_clock_out">下班安全测试</button>
+          <button class="action" data-job="diagnostic">环境诊断</button>
+          <button class="action" data-job="scrcpy_start">启动手机画面</button>
+          <button class="action" data-job="task_enable">启用每日任务</button>
+          <button class="action" data-job="task_disable">暂停每日任务</button>
+        </div>
+        <p class="muted small">安全测试不会主动点击按钮，但极速打卡仍可能在打开飞书时触发。</p>
+      </article>
+    </section>
+
+    <section class="panel job-panel">
+      <div class="section-heading"><div><p class="eyebrow">EXECUTION</p><h2>任务进度</h2></div><button id="cancel-job" class="ghost danger-text" hidden>停止任务</button></div>
+      <div id="active-job" class="empty-state">当前没有执行中的任务。</div>
+      <div id="job-history" class="job-list"></div>
+    </section>
+
+    <section class="panel calendar-panel">
+      <div class="section-heading calendar-heading">
+        <div><p class="eyebrow">CALENDAR</p><h2>工作日与每日计划</h2></div>
+        <div class="calendar-controls">
+          <button id="previous-month" class="ghost">‹</button>
+          <strong id="calendar-title">--</strong>
+          <button id="next-month" class="ghost">›</button>
+          <button id="toggle-calendar-times" class="ghost" aria-pressed="false">显示时间</button>
+          <button id="sync-calendar" class="ghost">同步国务院安排</button>
+        </div>
+      </div>
+      <div class="weekday-row"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+      <div id="calendar-grid" class="calendar-grid"></div>
+      <div class="legend"><span class="dot work"></span>执行 <span class="dot rest"></span>跳过 <span class="dot manual"></span>人工设置 <span class="dot recorded"></span>有实际记录</div>
+    </section>
+
+    <section class="detail-grid">
+      <article class="panel">
+        <div class="section-heading"><div><p class="eyebrow">HISTORY</p><h2>最近打卡</h2></div></div>
+        <div class="table-wrap"><table><thead><tr><th>日期</th><th>上班</th><th>下班</th><th>状态</th></tr></thead><tbody id="history-body"></tbody></table></div>
+      </article>
+      <article class="panel">
+        <div class="section-heading"><div><p class="eyebrow">LOGS</p><h2>日志与诊断文件</h2></div></div>
+        <div class="inline-form"><input id="log-date" type="date"><button id="load-log" class="ghost">读取日志</button></div>
+        <pre id="log-output" class="log-output">请选择日期。</pre>
+        <div id="artifact-list" class="artifact-list"></div>
+      </article>
+    </section>
+
+    <section class="panel remote-help">
+      <div><p class="eyebrow">MANUAL CONTROL</p><h2>远程人工操作手机</h2><p class="muted">先点击“启动手机画面”，再通过RustDesk连接这台电脑并操作scrcpy窗口。Appium和ADB不会暴露到网络。</p></div>
+    </section>
+  </main>
+
+  <dialog id="day-dialog">
+    <form id="day-form" method="dialog">
+      <div class="section-heading"><div><p class="eyebrow">DAY PLAN</p><h2 id="day-title">日期计划</h2></div><button type="button" id="close-dialog" class="ghost">关闭</button></div>
+      <label>执行状态<select id="override-mode"><option value="default">跟随官方/周末规则</option><option value="workday">临时执行</option><option value="holiday">临时跳过</option></select></label>
+      <div class="time-grid"><label>上班时间<input id="clock-in" type="time" step="60"></label><label>下班时间<input id="clock-out" type="time" step="60"></label></div>
+      <div id="day-actual" class="alert subtle">实际记录：--</div>
+      <button type="submit" class="primary wide">保存当天设置</button>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

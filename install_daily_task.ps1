@@ -1,5 +1,5 @@
 param(
-    [string]$TaskName = "Feishu Morning Clock-In"
+    [string]$TaskName = "Attendance Hub Morning Clock-In"
 )
 
 Set-StrictMode -Version Latest

@@ -1,7 +1,7 @@
 param(
     [switch]$TestMode,
     [switch]$NotifyOnFailure,
-    [ValidateSet("ui", "scheduled")]
+    [ValidateSet("ui", "remote", "scheduled")]
     [string]$Source = "ui",
     [ValidateRange(1, 900)]
     [int]$AttemptTimeoutSeconds = 120,
@@ -20,6 +20,7 @@ $AppiumPort = 4723
 $MaxAttempts = 3
 $RetryDelaySeconds = 15
 $ResultFile = Join-Path $ProjectDir "config\clock_out_last_result.json"
+$AppConfigFile = Join-Path $ProjectDir "config\app_config.json"
 $RunId = [guid]::NewGuid().ToString("N")
 
 $startedAt = Get-Date
@@ -91,6 +92,29 @@ function Send-FailureNotification {
     catch {
         Write-Log "WARN: Unable to display failure notification: $($_.Exception.Message)"
     }
+}
+
+function Test-AutomationSafety {
+    if (-not (Test-Path -LiteralPath $AppConfigFile -PathType Leaf)) {
+        Write-Log "SAFETY: config/app_config.json is missing; device access is blocked."
+        return $false
+    }
+    try {
+        $safety = Get-Content -LiteralPath $AppConfigFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    }
+    catch {
+        Write-Log "SAFETY: app configuration is invalid; device access is blocked."
+        return $false
+    }
+    if (-not [bool]$safety.device_access_enabled) {
+        Write-Log "SAFETY: device access is disabled."
+        return $false
+    }
+    if ((-not $TestMode) -and (-not [bool]$safety.real_actions_enabled)) {
+        Write-Log "SAFETY: real attendance actions are disabled."
+        return $false
+    }
+    return $true
 }
 
 function Test-AppiumServer {
@@ -202,6 +226,18 @@ if (-not (Test-Path -LiteralPath $ScriptFile -PathType Leaf)) {
     exit 1
 }
 
+if (-not (Test-AutomationSafety)) {
+    Write-ClockOutResult -Status "failed" -Message "Automation safety lock blocked this run." -ExitCode 4
+    exit 4
+}
+
+if ((-not $TestMode) -and ((Get-Date).ToString("HH:mm") -ge "23:55")) {
+    Write-Log "CROSS-DAY SAFETY: real clock-out cannot start from 23:55 onward."
+    Write-ClockOutResult -Status "failed" -Message "Cross-day safety blocked a late clock-out run." -ExitCode 5
+    exit 5
+}
+$attendanceRunDate = (Get-Date).Date
+
 if (-not [string]::IsNullOrWhiteSpace($PlannedDate)) {
     try {
         $culture = [System.Globalization.CultureInfo]::InvariantCulture
@@ -222,7 +258,10 @@ if (-not [string]::IsNullOrWhiteSpace($PlannedDate)) {
     }
 }
 
-$mutex = New-Object System.Threading.Mutex($false, "Local\FeishuClockOut")
+$mutex = New-Object System.Threading.Mutex(
+    $false,
+    "Local\AttendanceAutomationHubDevice"
+)
 $mutexAcquired = $false
 $attempt = 0
 
@@ -235,9 +274,9 @@ try {
     }
 
     if (-not $mutexAcquired) {
-        Write-Log "Another clock-out flow is already running; exiting."
-        Write-ClockOutResult -Status "busy" -Message "Another clock-out flow was already running." -ExitCode 3
-        Send-FailureNotification "Feishu clock-out did not start because another run is active."
+        Write-Log "DEVICE BUSY: another attendance or phone-control action is active; exiting."
+        Write-ClockOutResult -Status "busy" -Message "Another device action was already running." -ExitCode 3
+        Send-FailureNotification "Feishu clock-out did not start because the device was busy."
         exit 3
     }
 
@@ -253,6 +292,11 @@ try {
     }
 
     for ($attempt = 1; $attempt -le $MaxAttempts; $attempt += 1) {
+        if ((-not $TestMode) -and ((Get-Date).Date -ne $attendanceRunDate)) {
+            Write-Log "CROSS-DAY SAFETY: the date changed before retry; stopping."
+            Write-ClockOutResult -Status "failed" -Message "The date changed before retry." -Attempts ($attempt - 1) -ExitCode 5
+            exit 5
+        }
         Write-Log "Starting attempt #$attempt."
         $flowResult = Invoke-ClockOutFlow
         $exitCode = $flowResult.ExitCode

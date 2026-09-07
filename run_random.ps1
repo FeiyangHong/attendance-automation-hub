@@ -18,6 +18,7 @@ $OfficialCalendarFile = Join-Path $ProjectDir "config\official_holidays.json"
 $MorningPlanFile = Join-Path $ProjectDir "config\morning_current_plan.json"
 $DailyPlansFile = Join-Path $ProjectDir "config\daily_plans.json"
 $HolidaySyncScript = Join-Path $ProjectDir "holiday_sync.py"
+$AppConfigFile = Join-Path $ProjectDir "config\app_config.json"
 $AppiumCmd = Join-Path $env:APPDATA "npm\appium.cmd"
 $AppiumHost = "127.0.0.1"
 $AppiumPort = 4723
@@ -113,6 +114,29 @@ function Write-MorningPlan {
         $record + [Environment]::NewLine,
         $utf8WithoutBom
     )
+}
+
+function Test-AutomationSafety {
+    if (-not (Test-Path -LiteralPath $AppConfigFile -PathType Leaf)) {
+        Write-Log "SAFETY: config/app_config.json is missing; device access is blocked."
+        return $false
+    }
+    try {
+        $safety = Get-Content -LiteralPath $AppConfigFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    }
+    catch {
+        Write-Log "SAFETY: app configuration is invalid; device access is blocked."
+        return $false
+    }
+    if (-not [bool]$safety.device_access_enabled) {
+        Write-Log "SAFETY: device access is disabled."
+        return $false
+    }
+    if ((-not $TestMode) -and (-not [bool]$safety.real_actions_enabled)) {
+        Write-Log "SAFETY: real attendance actions are disabled."
+        return $false
+    }
+    return $true
 }
 
 function Get-CalendarDecision {
@@ -233,6 +257,22 @@ function Get-CustomClockInTime {
     }
     catch {
         throw "Unable to read daily exact plans: $($_.Exception.Message)"
+    }
+}
+
+function Test-TodayMorningAlreadySucceeded {
+    if (-not (Test-Path -LiteralPath $MorningPlanFile -PathType Leaf)) {
+        return $false
+    }
+    try {
+        $record = Get-Content -LiteralPath $MorningPlanFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        return (
+            [string]$record.date -eq (Get-Date).ToString("yyyy-MM-dd") -and
+            [string]$record.status -eq "success"
+        )
+    }
+    catch {
+        return $false
     }
 }
 
@@ -401,6 +441,10 @@ if (-not (Test-Path -LiteralPath $ScriptFile -PathType Leaf)) {
     exit 1
 }
 
+if (-not (Test-AutomationSafety)) {
+    exit 4
+}
+
 if ($Immediate -and (-not $TestMode)) {
     Write-Log "ERROR: -Immediate is allowed only together with -TestMode."
     exit 1
@@ -425,9 +469,13 @@ if ($PlannedClockIn -and (
 }
 
 $isExplicitClockIn = $ManualClockIn -or $PlannedClockIn
+$customTarget = $null
+$customDailyClockIn = $false
 
-# Prevent Task Scheduler retries and manual runs from overlapping.
-$mutexName = "Local\FeishuDryRunMorningClockIn"
+# The morning scheduler lock prevents the daily task and its exact-plan backup
+# from choosing two targets. Manual clock-in deliberately bypasses this lock;
+# all actual device work is protected later by the shared device lock.
+$mutexName = "Local\AttendanceAutomationHubMorningScheduler"
 $mutex = New-Object System.Threading.Mutex($false, $mutexName)
 $mutexAcquired = $false
 $targetTime = $null
@@ -435,7 +483,12 @@ $attempt = 0
 
 try {
     try {
-        $mutexAcquired = $mutex.WaitOne(0, $false)
+        if ($ManualClockIn) {
+            $mutexAcquired = $true
+        }
+        else {
+            $mutexAcquired = $mutex.WaitOne(0, $false)
+        }
     }
     catch [System.Threading.AbandonedMutexException] {
         $mutexAcquired = $true
@@ -443,7 +496,7 @@ try {
 
     if (-not $mutexAcquired) {
         Write-Log "Another scheduler instance is already running; exiting."
-        if ($isExplicitClockIn) {
+        if ($ManualClockIn) {
             exit 3
         }
         exit 0
@@ -479,14 +532,12 @@ try {
                 $culture,
                 [System.Globalization.DateTimeStyles]::None
             )
-            Write-Log "DAILY PLAN: exact clock-in $customClockIn owns today; random morning flow skipped."
-            if ($customTarget -gt $now) {
-                Write-MorningPlan `
-                    -Status "waiting" `
-                    -TargetTime $customTarget `
-                    -Message "Waiting for the exact per-date clock-in plan."
+            $customDailyClockIn = $true
+            Write-Log "DAILY PLAN: exact clock-in $customClockIn replaces today's random target."
+            if (Test-TodayMorningAlreadySucceeded) {
+                Write-Log "DAILY PLAN: today's exact-plan flow already succeeded; duplicate run skipped."
+                exit 0
             }
-            exit 0
         }
     }
 
@@ -495,6 +546,9 @@ try {
     }
     elseif ($PlannedClockIn) {
         Write-Log "CALENDAR: bypassed for the explicit per-date clock-in plan."
+    }
+    elseif ($customDailyClockIn) {
+        Write-Log "CALENDAR: bypassed because the per-date clock-in plan has priority."
     }
     elseif (-not $TestMode) {
         if (-not (Ensure-OfficialCalendarYear -Year $now.Year)) {
@@ -534,6 +588,18 @@ try {
         $delaySeconds = 0
         $targetTime = $plannedTarget
         Write-Log "PLANNED MODE: exact clock-in target=$($targetTime.ToString('yyyy-MM-dd HH:mm'))."
+    }
+    elseif ($customDailyClockIn) {
+        $targetTime = $customTarget
+        $delaySeconds = [Math]::Max(
+            0,
+            [Math]::Ceiling(($targetTime - (Get-Date)).TotalSeconds)
+        )
+        Write-Log "DAILY PLAN: waiting for exact target=$($targetTime.ToString('yyyy-MM-dd HH:mm'))."
+        Write-MorningPlan `
+            -Status "waiting" `
+            -TargetTime $targetTime `
+            -Message "Waiting for the exact per-date clock-in plan."
     }
     elseif ($TestMode) {
         # Fast timer test: wait 5-15 seconds and never perform the real click.
@@ -598,8 +664,13 @@ try {
         Start-Sleep -Seconds $delaySeconds
     }
 
+    if ((-not $TestMode) -and ((Get-Date).ToString("HH:mm") -ge "23:55")) {
+        Write-Log "CROSS-DAY SAFETY: real clock-in cannot start from 23:55 onward."
+        exit 5
+    }
+
     # Do not clock in if the machine resumes after 09:30.
-    if ((-not $TestMode) -and (-not $isExplicitClockIn) -and ((Get-Date) -gt $windowEnd)) {
+    if ((-not $TestMode) -and (-not $isExplicitClockIn) -and (-not $customDailyClockIn) -and ((Get-Date) -gt $windowEnd)) {
         Write-Log "The machine resumed after 09:30; today's morning flow is skipped."
         Write-MorningPlan `
             -Status "skipped" `
@@ -619,7 +690,32 @@ try {
             -Attempts $attempt `
             -Message "Attendance flow is running."
 
-        $exitCode = Invoke-PythonFlow -DryRun:$TestMode
+        $deviceMutex = New-Object System.Threading.Mutex(
+            $false,
+            "Local\AttendanceAutomationHubDevice"
+        )
+        $deviceMutexAcquired = $false
+        try {
+            try {
+                $deviceMutexAcquired = $deviceMutex.WaitOne(5000, $false)
+            }
+            catch [System.Threading.AbandonedMutexException] {
+                $deviceMutexAcquired = $true
+            }
+            if (-not $deviceMutexAcquired) {
+                Write-Log "DEVICE BUSY: another attendance or phone-control action is active."
+                $exitCode = 3
+            }
+            else {
+                $exitCode = Invoke-PythonFlow -DryRun:$TestMode
+            }
+        }
+        finally {
+            if ($deviceMutexAcquired) {
+                $deviceMutex.ReleaseMutex()
+            }
+            $deviceMutex.Dispose()
+        }
 
         if ($exitCode -eq 0) {
             Write-Log "Scheduler completed successfully."
@@ -648,7 +744,7 @@ try {
             exit $exitCode
         }
 
-        if ((-not $isExplicitClockIn) -and ((Get-Date) -ge $windowEnd)) {
+        if ((-not $isExplicitClockIn) -and (-not $customDailyClockIn) -and ((Get-Date) -ge $windowEnd)) {
             Write-Log "Flow failed and the 09:30 deadline has been reached; stopping retries."
             Write-MorningPlan `
                 -Status "failed" `
@@ -675,7 +771,7 @@ catch {
     exit 1
 }
 finally {
-    if ($mutexAcquired) {
+    if ($mutexAcquired -and (-not $ManualClockIn)) {
         $mutex.ReleaseMutex()
     }
 
