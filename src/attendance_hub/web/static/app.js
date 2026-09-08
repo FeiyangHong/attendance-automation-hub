@@ -23,8 +23,10 @@ function toast(message, bad = false) {
 
 function setStatus(id, text, level = '') {
   const element = document.getElementById(id);
+  if (!element) return;
   element.textContent = text;
   element.className = level;
+  if (id === 'today-arrangement') element.classList.add('multiline');
 }
 
 function formatPlan(plan) {
@@ -97,13 +99,20 @@ async function refreshStatus() {
     const tailscale = data.tailscale || {};
     setStatus('tailscale-state', tailscale.online ? (tailscale.dns_name || '在线') : tailscale.installed ? '离线' : '未安装', tailscale.online ? 'good' : 'warn');
     const calendar = data.today?.calendar || {};
-    setStatus('calendar-state', `${calendar.label || '--'} · ${calendar.reason || ''}`, calendar.should_run ? 'good' : 'warn');
-    setStatus('today-plan', formatPlan(data.today?.plan));
+    const calendarText = `${calendar.label || '--'} · ${calendar.reason || ''}`;
+    setStatus('today-arrangement', `${calendarText}\n单日计划：${formatPlan(data.today?.plan)}`, calendar.should_run ? 'good' : 'warn');
     document.getElementById('updated-at').textContent = new Date(data.timestamp).toLocaleString();
     renderHistory(data.recent_attendance || []);
     renderMorningProgress(morningPlan, data.today?.date || '');
     renderActiveJob(data.active_job);
-  } catch (error) { toast(error.message, true); }
+  } catch (error) {
+    ['device-state', 'appium-state', 'tailscale-state', 'task-state', 'next-wake', 'next-execution', 'morning-plan', 'last-task-result', 'today-arrangement']
+      .forEach(id => setStatus(id, '读取失败', 'bad'));
+    const dailyProgress = document.getElementById('daily-task-progress');
+    dailyProgress.className = 'empty-state';
+    dailyProgress.textContent = `状态读取失败：${error.message}`;
+    toast(error.message, true);
+  }
 }
 
 function renderHistory(records) {

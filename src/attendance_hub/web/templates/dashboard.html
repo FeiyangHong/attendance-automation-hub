@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="csrf-token" content="{{ csrf_token }}">
   <title>Attendance Automation Hub</title>
-  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/app.css?v={{ asset_version }}">
 </head>
 <body>
   <header class="topbar">
@@ -43,8 +43,7 @@
           <div class="status-item"><span>下次实际打卡日</span><strong id="next-execution">读取中</strong></div>
           <div class="status-item"><span>本次计划</span><strong id="morning-plan">读取中</strong></div>
           <div class="status-item"><span>上次结果</span><strong id="last-task-result">读取中</strong></div>
-          <div class="status-item"><span>今日日历</span><strong id="calendar-state">读取中</strong></div>
-          <div class="status-item status-wide"><span>今日计划</span><strong id="today-plan">读取中</strong></div>
+          <div class="status-item"><span>今日安排</span><strong id="today-arrangement" class="multiline">读取中</strong></div>
         </div>
       </article>
 
@@ -118,6 +117,6 @@
   </dialog>
 
   <div id="toast" class="toast" hidden></div>
-  <script src="/static/app.js" defer></script>
+  <script src="/static/app.js?v={{ asset_version }}" defer></script>
 </body>
 </html>

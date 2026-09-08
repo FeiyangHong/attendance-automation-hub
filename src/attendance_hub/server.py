@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import hmac
 import re
 import threading
@@ -46,6 +47,14 @@ from .task_sync import synchronize_plan_tasks
 SESSION_COOKIE = "attendance_hub_session"
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 ARTIFACT_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+\.(?:png|xml)$")
+
+
+def static_asset_version() -> str:
+    digest = hashlib.sha256()
+    static_dir = PACKAGE_DIR / "web" / "static"
+    for name in ("app.css", "app.js"):
+        digest.update((static_dir / name).read_bytes())
+    return digest.hexdigest()[:12]
 
 
 class JobSubmission(BaseModel):
@@ -109,6 +118,7 @@ def create_app(settings: RemoteSettings | None = None) -> FastAPI:
     store = RemoteStore(settings.database_file)
     jobs = JobManager(settings, store)
     templates = Jinja2Templates(directory=str(PACKAGE_DIR / "web" / "templates"))
+    asset_version = static_asset_version()
     limiter = LoginLimiter()
 
     @asynccontextmanager
@@ -201,7 +211,7 @@ def create_app(settings: RemoteSettings | None = None) -> FastAPI:
         return templates.TemplateResponse(
             request=request,
             name="login.html",
-            context={"error": ""},
+            context={"error": "", "asset_version": asset_version},
         )
 
     @app.post("/login", response_class=HTMLResponse)
@@ -225,7 +235,7 @@ def create_app(settings: RemoteSettings | None = None) -> FastAPI:
             return templates.TemplateResponse(
                 request=request,
                 name="login.html",
-                context={"error": "用户名或密码错误"},
+                context={"error": "用户名或密码错误", "asset_version": asset_version},
                 status_code=401,
             )
         limiter.clear(address)
@@ -264,6 +274,7 @@ def create_app(settings: RemoteSettings | None = None) -> FastAPI:
                 "username": session["username"],
                 "csrf_token": session["csrf_token"],
                 "device_safety": load_app_config(),
+                "asset_version": asset_version,
             },
         )
 
