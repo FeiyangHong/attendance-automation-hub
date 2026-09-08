@@ -111,7 +111,7 @@ py -3.10 -m venv .venv
     -EnableDevice -EnableRealActions -ConfirmProduction CUTOVER
 ```
 
-安装每日任务和登录后自启的 Web 服务：
+安装每日任务和登录后由 `wscript.exe` 隐藏托管的 Web 服务：
 
 ```powershell
 .\scripts\setup\install_daily_task.ps1
@@ -122,6 +122,10 @@ Start-ScheduledTask -TaskName "Attendance Automation Hub Web"
 每日任务在 09:00 启动，并从当时到 09:30 的剩余窗口中随机选择实际时间；周末、
 法定节假日默认跳过，调休工作日执行。电脑错过 09:00 后在 09:30 前恢复时仍会计算
 剩余窗口；09:30 后不会补打。计划任务要求用户保持登录，锁屏不影响，退出登录会影响。
+
+电脑重启后，Tailscale 服务会随系统启动，Web 服务会在该 Windows 用户登录时自动
+启动，每日任务仍按计划保留。每日任务不会主动唤醒关机或休眠的电脑；首次验证建议
+在 09:00 前开机并登录。
 
 ## 5. 使用命令
 

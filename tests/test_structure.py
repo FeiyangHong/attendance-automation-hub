@@ -27,6 +27,7 @@ def test_internal_runtime_files_use_the_src_and_scripts_layout():
         "scripts/runtime/run_morning.ps1",
         "scripts/runtime/run_clock_out.ps1",
         "scripts/runtime/run_web.ps1",
+        "scripts/runtime/run_web_hidden.vbs",
     ):
         assert (PROJECT_DIR / relative_name).is_file()
 

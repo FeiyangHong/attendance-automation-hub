@@ -62,6 +62,7 @@ $requiredFiles = @(
     "scripts\runtime\run_morning.ps1",
     "scripts\runtime\run_clock_out.ps1",
     "scripts\runtime\run_web.ps1",
+    "scripts\runtime\run_web_hidden.vbs",
     "scripts\operations\schedule_clock_out.ps1",
     "scripts\operations\sync_daily_plan.ps1",
     "scripts\setup\install_daily_task.ps1",

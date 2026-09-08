@@ -9,24 +9,22 @@ $ProjectDir = [System.IO.Path]::GetFullPath(
     (Join-Path $PSScriptRoot "..\..")
 )
 $Runner = Join-Path $ProjectDir "scripts\runtime\run_web.ps1"
+$HiddenRunner = Join-Path $ProjectDir "scripts\runtime\run_web_hidden.vbs"
 $PythonExe = Join-Path $ProjectDir ".venv\Scripts\python.exe"
 $RemoteConfig = Join-Path $ProjectDir "config\remote_config.json"
-$PowerShellExe = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+$WscriptExe = Join-Path $env:SystemRoot "System32\wscript.exe"
 
-foreach ($required in @($Runner, $PythonExe, $RemoteConfig)) {
+foreach ($required in @($Runner, $HiddenRunner, $PythonExe, $RemoteConfig, $WscriptExe)) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
         throw "Required file not found: $required"
     }
 }
 
-$arguments = @(
-    "-NoProfile"
-    "-NonInteractive"
-    "-WindowStyle Hidden"
-    "-ExecutionPolicy Bypass"
-    "-File `"$Runner`""
-) -join " "
-$action = New-ScheduledTaskAction -Execute $PowerShellExe -Argument $arguments -WorkingDirectory $ProjectDir
+$arguments = "//B //NoLogo `"$HiddenRunner`""
+$action = New-ScheduledTaskAction `
+    -Execute $WscriptExe `
+    -Argument $arguments `
+    -WorkingDirectory $ProjectDir
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 $settings = New-ScheduledTaskSettingsSet `
     -RestartCount 5 `
@@ -37,6 +35,6 @@ $settings = New-ScheduledTaskSettingsSet `
     -DontStopIfGoingOnBatteries
 $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 $principal = New-ScheduledTaskPrincipal -UserId $currentUser -LogonType Interactive -RunLevel Limited
-$task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description "Loopback-only Attendance Automation Hub web service"
+$task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description "Hidden loopback-only Attendance Automation Hub web service"
 Register-ScheduledTask -TaskName $TaskName -InputObject $task -Force | Out-Null
 Write-Host "Remote service task installed but not started: $TaskName"
