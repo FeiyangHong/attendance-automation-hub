@@ -85,4 +85,13 @@ dist/                 发布压缩包
 - 测试：`.\.venv\Scripts\python.exe -m pytest`
 - 紧急回滚：`.\scripts\migration\rollback_to_legacy.ps1 -ConfirmRollback ROLLBACK`
 
+远程网页无法访问或 Web 终端被关闭时，重启后台服务：
+
+```powershell
+Stop-ScheduledTask -TaskName "Attendance Automation Hub Web" -ErrorAction SilentlyContinue
+Start-ScheduledTask -TaskName "Attendance Automation Hub Web"
+```
+
+重启 Web 服务不会影响每日打卡计划任务。
+
 运行数据、密码配置、截图、日志、发布包和 `.venv` 均被 Git 排除。
