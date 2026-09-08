@@ -86,7 +86,7 @@ adb devices -l
 ## 3. Install the project
 
 ```powershell
-git clone <repository-url> attendance-automation-hub
+git clone https://github.com/FeiyangHong/attendance-automation-hub.git
 cd attendance-automation-hub
 py -3.10 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
