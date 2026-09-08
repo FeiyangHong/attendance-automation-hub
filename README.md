@@ -1,25 +1,31 @@
 # Attendance Automation Hub
 
-Windows 上的独立 Android 考勤自动化工具，包含每日随机上班打卡、立即上/下班、
-下班更新确认、节假日与单日计划、历史记录、桌面面板、scrcpy 手机控制和 Tailscale
-私网 Web 控制。默认上班窗口为 `09:00～09:30`。
+English | [简体中文](README_CN.md)
 
-> 自动化会操作真实考勤账号。请先运行安全测试，并确认符合所在组织的制度。
-> 测试模式不会主动点击，但飞书“极速打卡”仍可能在应用打开时自行打卡。
+A standalone Windows application for Android attendance automation. It provides
+randomized daily clock-in, immediate clock-in/clock-out, clock-out update confirmation,
+holiday and per-day schedules, attendance history, a desktop panel, scrcpy phone control,
+and private remote Web access through Tailscale. The default clock-in window is
+`09:00–09:30`.
 
-## 1. 环境要求
+> The automation operates a real attendance account. Run the safe tests first and make
+> sure its use complies with your organization's policies. Test mode does not actively
+> click attendance buttons, but Feishu's Quick Clock-in feature may still clock you in
+> automatically when the app opens.
 
-- Windows 10/11，使用当前登录的桌面用户运行。
-- Android 8 或更高版本的真机，USB 连接电脑。
+## 1. Requirements
+
+- Windows 10/11, running under the currently signed-in desktop user.
+- A physical Android 8+ device connected by USB.
 - [Python 3.10+](https://www.python.org/downloads/windows/)
 - [Microsoft OpenJDK 17](https://learn.microsoft.com/java/openjdk/download)
 - [Node.js LTS](https://nodejs.org/en/download)
 - [Android Studio / Android SDK](https://developer.android.com/studio)
-- [Appium 与 UiAutomator2](https://appium.io/docs/en/latest/ecosystem/drivers/)
-- [scrcpy](https://github.com/Genymobile/scrcpy/blob/master/doc/windows.md)（手机画面控制）
-- [Tailscale](https://tailscale.com/docs/install/windows)（仅远程访问需要）
+- [Appium and UiAutomator2](https://appium.io/docs/en/latest/ecosystem/drivers/)
+- [scrcpy](https://github.com/Genymobile/scrcpy/blob/master/doc/windows.md) (phone display and control)
+- [Tailscale](https://tailscale.com/docs/install/windows) (remote access only)
 
-可在 PowerShell 中用 WinGet 安装主要组件：
+Install the main components with WinGet in PowerShell:
 
 ```powershell
 winget install --exact --id Python.Python.3.10
@@ -32,13 +38,14 @@ winget install --exact --id Tailscale.Tailscale
 
 ### Android SDK
 
-打开 Android Studio → `More Actions` → `SDK Manager` → `SDK Tools`，安装：
+Open Android Studio → `More Actions` → `SDK Manager` → `SDK Tools`, then install:
 
 - Android SDK Platform-Tools
 - Android SDK Build-Tools
 - Android SDK Command-line Tools (latest)
 
-通常 SDK 位于 `%LOCALAPPDATA%\Android\Sdk`。设置用户环境变量：
+The SDK is normally located at `%LOCALAPPDATA%\Android\Sdk`. Set the user environment
+variables in PowerShell:
 
 ```powershell
 $sdkPath = Join-Path $env:LOCALAPPDATA "Android\Sdk"
@@ -51,10 +58,11 @@ if (($userPath -split ";") -notcontains $platformTools) {
 }
 ```
 
-安装 JDK 时应同时设置 `JAVA_HOME`；若诊断提示缺失，将它设为实际 JDK 17 目录，
-并把 `%JAVA_HOME%\bin` 加入用户 `Path`。完成环境变量设置后重新打开 PowerShell。
+The JDK installer should also set `JAVA_HOME`. If diagnostics report that it is missing,
+set it to the actual JDK 17 directory and add `%JAVA_HOME%\bin` to the user `Path`.
+Reopen PowerShell after changing environment variables.
 
-安装 Appium 3 和 Android 驱动：
+Install Appium 3 and its Android driver:
 
 ```powershell
 npm.cmd install --global appium
@@ -62,18 +70,20 @@ appium.cmd driver install uiautomator2
 appium.cmd driver doctor uiautomator2
 ```
 
-## 2. 准备手机
+## 2. Prepare the phone
 
-1. 安装飞书并登录需要操作的账号，确认可以手动进入“工作台 → 假勤”。
-2. 在手机“关于手机”中连续点击版本号，开启开发者选项与 USB 调试。
-3. USB 连接电脑，在手机上允许这台电脑的调试授权。
-4. 运行下列命令，记录状态为 `device` 的序列号：
+1. Install Feishu, sign in to the account to be operated, and confirm that you can
+   manually open `Workplace → Attendance`.
+2. In About phone, tap the build/version number repeatedly to enable Developer options
+   and USB debugging.
+3. Connect the phone by USB and approve this computer's debugging authorization.
+4. Run the command below and record the serial number whose status is `device`:
 
 ```powershell
 adb devices -l
 ```
 
-## 3. 安装项目
+## 3. Install the project
 
 ```powershell
 git clone <repository-url> attendance-automation-hub
@@ -84,34 +94,37 @@ py -3.10 -m venv .venv
 .\hub.ps1 diagnose
 ```
 
-开发者需要运行测试时再安装开发依赖：
+Install the development dependencies only when you need to run the test suite:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 .\.venv\Scripts\python.exe -m pytest
 ```
 
-## 4. 配置与安全测试
+## 4. Configure and test safely
 
-下面的配置命令会要求输入两次不少于 12 位的 Web 密码。首次只开启设备访问，
-不会允许脚本主动点击真实打卡：
+The following command prompts twice for a Web password of at least 12 characters. The
+initial setup enables device access only and does not allow the script to actively click
+real attendance buttons:
 
 ```powershell
-.\scripts\setup\configure_remote.ps1 -DeviceUdid "你的ADB序列号" -EnableDevice
+.\scripts\setup\configure_remote.ps1 -DeviceUdid "YOUR_ADB_SERIAL" -EnableDevice
 .\hub.ps1 diagnose
 .\scripts\runtime\run_morning.ps1 -TestMode -Immediate
 .\scripts\runtime\run_clock_out.ps1 -TestMode
 ```
 
-确认识别结果正确后，重新配置并显式开启真实操作：
+After confirming that detection works correctly, configure it again and explicitly enable
+real actions:
 
 ```powershell
 .\scripts\setup\configure_remote.ps1 `
-    -DeviceUdid "你的ADB序列号" `
+    -DeviceUdid "YOUR_ADB_SERIAL" `
     -EnableDevice -EnableRealActions -ConfirmProduction CUTOVER
 ```
 
-安装每日任务和登录后由 `wscript.exe` 隐藏托管的 Web 服务：
+Install the daily task and the Web service, which is hosted invisibly by `wscript.exe`
+after sign-in:
 
 ```powershell
 .\scripts\setup\install_daily_task.ps1
@@ -119,82 +132,92 @@ py -3.10 -m venv .venv
 Start-ScheduledTask -TaskName "Attendance Automation Hub Web"
 ```
 
-每日任务在 09:00 启动，并从当时到 09:30 的剩余窗口中随机选择实际时间；周末、
-法定节假日默认跳过，调休工作日执行。电脑错过 09:00 后在 09:30 前恢复时仍会计算
-剩余窗口；09:30 后不会补打。计划任务要求用户保持登录，锁屏不影响，退出登录会影响。
+The daily task starts at 09:00 and randomly selects an actual time from the remaining
+window through 09:30. Weekends and statutory holidays are skipped by default, while
+official adjusted working days run normally. If the computer resumes after 09:00 but
+before 09:30, the task still calculates a time within the remaining window; it does not
+make up the clock-in after 09:30. The scheduled task requires the user to remain signed
+in. Locking the screen is fine; signing out is not.
 
-电脑重启后，Tailscale 服务会随系统启动，Web 服务会在该 Windows 用户登录时自动
-启动，每日任务仍按计划保留。每日任务不会主动唤醒关机或休眠的电脑；首次验证建议
-在 09:00 前开机并登录。
+After a computer restart, the Tailscale service starts with Windows, the Web service
+starts when this Windows user signs in, and the daily task remains scheduled. The daily
+task does not wake a powered-off or sleeping computer. For the first verification, keep
+the computer powered on and signed in before 09:00.
 
-## 5. 使用命令
+## 5. Commands
 
 ```powershell
-# 桌面面板；也可以双击 Attendance Hub.vbs
+# Desktop panel; you can also double-click Attendance Hub.vbs
 .\hub.ps1 desktop
 
-# 立即真实上班 / 下班
+# Immediate real clock-in / clock-out
 .\hub.ps1 clock-in
 .\hub.ps1 clock-out
 
-# 手机画面与自由操作
+# Phone display and unrestricted control
 .\scripts\operations\start_scrcpy.ps1
 
-# 环境诊断
+# Environment diagnostics
 .\hub.ps1 diagnose
 
-# 启用 / 暂停每日任务
+# Enable / pause the daily task
 Enable-ScheduledTask -TaskName "Attendance Hub Morning Clock-In"
 Disable-ScheduledTask -TaskName "Attendance Hub Morning Clock-In"
 ```
 
-关闭桌面面板不影响计划任务。远程网页中断时重启后台服务：
+Closing the desktop panel does not affect scheduled tasks. If the remote Web page stops
+responding, restart its background service:
 
 ```powershell
 Stop-ScheduledTask -TaskName "Attendance Automation Hub Web" -ErrorAction SilentlyContinue
 Start-ScheduledTask -TaskName "Attendance Automation Hub Web"
 ```
 
-本机访问地址：`http://127.0.0.1:8765`。
+Local address: `http://127.0.0.1:8765`.
 
-## 6. Tailscale 私网远程访问（可选）
+## 6. Private remote access with Tailscale (optional)
 
-1. 在打卡电脑和远程电脑/安卓手机安装 Tailscale，并登录同一 tailnet。
-2. 重新配置允许访问的 Tailscale 登录邮箱：
+1. Install Tailscale on the attendance computer and the remote computer/Android phone,
+   then sign in to the same tailnet.
+2. Reconfigure the allowed Tailscale login email:
 
 ```powershell
 .\scripts\setup\configure_remote.ps1 `
-    -DeviceUdid "你的ADB序列号" `
+    -DeviceUdid "YOUR_ADB_SERIAL" `
     -TailscaleUser "your-email@example.com" `
     -EnableDevice -EnableRealActions -ConfirmProduction CUTOVER
 ```
 
-3. 在管理员 PowerShell 中配置仅 tailnet 可访问的 HTTPS 入口：
+3. In an administrator PowerShell window, create an HTTPS endpoint accessible only from
+   the tailnet:
 
 ```powershell
 .\scripts\setup\setup_tailscale_serve.ps1
 Start-ScheduledTask -TaskName "Attendance Automation Hub Web"
 ```
 
-脚本会显示 `https://<computer>.<tailnet>.ts.net`。不要启用 Funnel，也不要把
-`8765`、`4723` 或 ADB 端口映射到公网。Clash 用户应让 `*.ts.net` 走直连规则。
+The script displays a URL such as `https://<computer>.<tailnet>.ts.net`. Do not enable
+Funnel or expose ports `8765`, `4723`, or any ADB port to the public internet. Clash users
+should route `*.ts.net` directly.
 
-停用远程入口：
+Disable remote access with:
 
 ```powershell
 .\scripts\setup\setup_tailscale_serve.ps1 -Disable
 .\scripts\setup\uninstall_remote_service.ps1
 ```
 
-## 7. 数据与故障排查
+## 7. Data and troubleshooting
 
-- 每日日志：`logs\YYYY-MM\YYYY-MM-DD.log`
-- 失败截图/XML：`artifacts\`
-- 历史与远程任务数据库：`data\`
-- 本机账号、密码哈希和设备配置：`config\app_config.json`、`config\remote_config.json`
-- 日历页面可同步国务院年度放假安排，并为单日设置执行/跳过或精确上下班时间。
+- Daily logs: `logs\YYYY-MM\YYYY-MM-DD.log`
+- Failure screenshots/XML: `artifacts\`
+- Attendance history and remote job database: `data\`
+- Local account, password hash, and device configuration: `config\app_config.json`,
+  `config\remote_config.json`
+- The calendar page can synchronize China's annual statutory holiday schedule and set
+  run/skip status or exact clock-in and clock-out times for an individual date.
 
-常见检查：
+Common checks:
 
 ```powershell
 adb devices -l
@@ -204,5 +227,5 @@ Get-ScheduledTask -TaskName "Attendance Hub Morning Clock-In"
 Get-ScheduledTask -TaskName "Attendance Automation Hub Web"
 ```
 
-真实配置、日志、数据库、截图、`.venv` 和发布包均被 Git 排除。发布包可用
-`.\hub.ps1 build` 生成。
+Real configuration, logs, databases, screenshots, `.venv`, and release packages are
+excluded from Git. Build a release package with `.\hub.ps1 build`.
