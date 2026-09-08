@@ -32,6 +32,49 @@ function formatPlan(plan) {
   return [plan.clock_in ? `上 ${plan.clock_in}` : '', plan.clock_out ? `下 ${plan.clock_out}` : ''].filter(Boolean).join(' / ');
 }
 
+function formatTaskResult(value) {
+  if (value === undefined || value === null || value === '') return { text: '--', level: '' };
+  const code = Number(value);
+  const labels = {
+    0: '成功 (0)',
+    267009: '正在运行 (267009)',
+    267010: '已停用 (267010)',
+    267011: '尚未运行 (267011)',
+  };
+  return {
+    text: labels[code] || String(value),
+    level: code === 0 ? 'good' : code >= 267008 && code <= 267015 ? 'warn' : 'bad',
+  };
+}
+
+function renderMorningProgress(plan, todayDate) {
+  const container = document.getElementById('daily-task-progress');
+  if (!plan?.date) {
+    container.textContent = '尚无每日任务执行记录。';
+    container.className = 'empty-state';
+    return;
+  }
+
+  const attempts = Number.isFinite(Number(plan.attempts)) ? Number(plan.attempts) : 0;
+  const isToday = plan.date === todayDate;
+  const description = plan.message || '暂无执行说明。';
+  const updatedAt = plan.updated_at ? new Date(plan.updated_at).toLocaleString() : '--';
+  const values = [
+    isToday ? '今日自动上班' : `${plan.date} 自动上班`,
+    plan.status || '--',
+    `尝试 ${attempts} 次 · ${description}`,
+    updatedAt,
+  ];
+  container.className = 'job-row';
+  container.replaceChildren();
+  values.forEach((value, index) => {
+    const span = document.createElement('span');
+    span.textContent = value;
+    if (index === 2) span.className = 'job-message';
+    container.append(span);
+  });
+}
+
 async function refreshStatus() {
   try {
     const data = await api('/api/status');
@@ -43,6 +86,14 @@ async function refreshStatus() {
     setStatus('next-wake', task.NextRunTime || '无');
     const nextExecution = data.next_execution || {};
     setStatus('next-execution', nextExecution.date ? `${nextExecution.date} · ${nextExecution.label || ''}` : '无');
+    const morningPlan = data.morning_plan || {};
+    const planIsToday = morningPlan.date === data.today?.date;
+    const planText = planIsToday
+      ? (morningPlan.target_time || (morningPlan.status === 'skipped' ? '今日跳过' : '尚未生成'))
+      : '尚未生成';
+    setStatus('morning-plan', planText, planIsToday && morningPlan.target_time ? 'good' : '');
+    const taskResult = formatTaskResult(task.LastTaskResult);
+    setStatus('last-task-result', taskResult.text, taskResult.level);
     const tailscale = data.tailscale || {};
     setStatus('tailscale-state', tailscale.online ? (tailscale.dns_name || '在线') : tailscale.installed ? '离线' : '未安装', tailscale.online ? 'good' : 'warn');
     const calendar = data.today?.calendar || {};
@@ -50,6 +101,7 @@ async function refreshStatus() {
     setStatus('today-plan', formatPlan(data.today?.plan));
     document.getElementById('updated-at').textContent = new Date(data.timestamp).toLocaleString();
     renderHistory(data.recent_attendance || []);
+    renderMorningProgress(morningPlan, data.today?.date || '');
     renderActiveJob(data.active_job);
   } catch (error) { toast(error.message, true); }
 }

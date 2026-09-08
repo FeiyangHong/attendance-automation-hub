@@ -37,12 +37,14 @@
         <div class="status-grid">
           <div class="status-item"><span>安卓设备</span><strong id="device-state">读取中</strong></div>
           <div class="status-item"><span>Appium</span><strong id="appium-state">读取中</strong></div>
+          <div class="status-item"><span>Tailscale</span><strong id="tailscale-state">读取中</strong></div>
           <div class="status-item"><span>每日任务</span><strong id="task-state">读取中</strong></div>
           <div class="status-item"><span>下次系统唤醒</span><strong id="next-wake">读取中</strong></div>
           <div class="status-item"><span>下次实际打卡日</span><strong id="next-execution">读取中</strong></div>
-          <div class="status-item"><span>Tailscale</span><strong id="tailscale-state">读取中</strong></div>
+          <div class="status-item"><span>本次计划</span><strong id="morning-plan">读取中</strong></div>
+          <div class="status-item"><span>上次结果</span><strong id="last-task-result">读取中</strong></div>
           <div class="status-item"><span>今日日历</span><strong id="calendar-state">读取中</strong></div>
-          <div class="status-item"><span>今日计划</span><strong id="today-plan">读取中</strong></div>
+          <div class="status-item status-wide"><span>今日计划</span><strong id="today-plan">读取中</strong></div>
         </div>
       </article>
 
@@ -64,6 +66,9 @@
 
     <section class="panel job-panel">
       <div class="section-heading"><div><p class="eyebrow">EXECUTION</p><h2>任务进度</h2></div><button id="cancel-job" class="ghost danger-text" hidden>停止任务</button></div>
+      <p class="progress-heading">每日自动任务</p>
+      <div id="daily-task-progress" class="empty-state" aria-live="polite">尚无每日任务执行记录。</div>
+      <p class="progress-heading">远程操作任务</p>
       <div id="active-job" class="empty-state">当前没有执行中的任务。</div>
       <div id="job-history" class="job-list"></div>
     </section>

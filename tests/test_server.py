@@ -45,6 +45,19 @@ def test_auth_csrf_and_real_action_safety(tmp_path, monkeypatch):
         assert "disabled" in response.json()["detail"]
 
 
+def test_dashboard_contains_daily_execution_status(tmp_path, monkeypatch):
+    monkeypatch.setenv("ATTENDANCE_HUB_APP_CONFIG", str(tmp_path / "missing.json"))
+    app = create_app(configured_settings(tmp_path))
+    with TestClient(app) as client:
+        login(client)
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'id="morning-plan"' in response.text
+        assert 'id="last-task-result"' in response.text
+        assert 'id="daily-task-progress"' in response.text
+        assert "每日自动任务" in response.text
+
+
 def test_tailscale_identity_allowlist(tmp_path):
     settings = configured_settings(tmp_path)
     settings = RemoteSettings(
