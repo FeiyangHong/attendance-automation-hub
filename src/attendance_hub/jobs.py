@@ -311,10 +311,27 @@ class JobManager:
         common = [powershell, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File"]
         project = self.settings.project_dir
         commands = {
-            "clock_in": common + [str(project / "run_random.ps1"), "-ManualClockIn"],
-            "clock_out": common + [str(project / "run_clock_out.ps1"), "-Source", "remote"],
-            "dry_run_clock_in": common + [str(project / "run_random.ps1"), "-TestMode", "-Immediate"],
-            "dry_run_clock_out": common + [str(project / "run_clock_out.ps1"), "-TestMode", "-Source", "remote"],
+            "clock_in": common
+            + [str(project / "scripts" / "runtime" / "run_morning.ps1"), "-ManualClockIn"],
+            "clock_out": common
+            + [
+                str(project / "scripts" / "runtime" / "run_clock_out.ps1"),
+                "-Source",
+                "remote",
+            ],
+            "dry_run_clock_in": common
+            + [
+                str(project / "scripts" / "runtime" / "run_morning.ps1"),
+                "-TestMode",
+                "-Immediate",
+            ],
+            "dry_run_clock_out": common
+            + [
+                str(project / "scripts" / "runtime" / "run_clock_out.ps1"),
+                "-TestMode",
+                "-Source",
+                "remote",
+            ],
             "diagnostic": common
             + [str(project / "scripts" / "operations" / "diagnose_environment.ps1")],
             "task_enable": [powershell, "-NoProfile", "-NonInteractive", "-Command", f"Enable-ScheduledTask -TaskName '{self.settings.task_name.replace(chr(39), chr(39) * 2)}' | Out-Null"],

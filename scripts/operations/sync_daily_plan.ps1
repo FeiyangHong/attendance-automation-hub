@@ -13,8 +13,8 @@ $ErrorActionPreference = "Stop"
 $ProjectDir = [System.IO.Path]::GetFullPath(
     (Join-Path $PSScriptRoot "..\..")
 )
-$MorningRunner = Join-Path $ProjectDir "run_random.ps1"
-$ClockOutRunner = Join-Path $ProjectDir "run_clock_out.ps1"
+$MorningRunner = Join-Path $ProjectDir "scripts\runtime\run_morning.ps1"
+$ClockOutRunner = Join-Path $ProjectDir "scripts\runtime\run_clock_out.ps1"
 $PowerShellExe = Join-Path $env:SystemRoot `
     "System32\WindowsPowerShell\v1.0\powershell.exe"
 $culture = [System.Globalization.CultureInfo]::InvariantCulture

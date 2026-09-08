@@ -16,6 +16,13 @@ $ProjectDir = [System.IO.Path]::GetFullPath(
     (Join-Path $PSScriptRoot "..\..")
 )
 $PythonExe = Join-Path $ProjectDir ".venv\Scripts\python.exe"
+$SourceDir = Join-Path $ProjectDir "src"
+$env:PYTHONPATH = if ([string]::IsNullOrWhiteSpace($env:PYTHONPATH)) {
+    $SourceDir
+}
+else {
+    "$SourceDir;$env:PYTHONPATH"
+}
 if (-not (Test-Path -LiteralPath $PythonExe -PathType Leaf)) {
     throw "Create the project virtual environment first: $PythonExe"
 }

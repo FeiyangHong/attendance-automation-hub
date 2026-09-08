@@ -4,6 +4,13 @@ $ErrorActionPreference = "Continue"
 $ProjectDir = [System.IO.Path]::GetFullPath(
     (Join-Path $PSScriptRoot "..\..")
 )
+$SourceDir = Join-Path $ProjectDir "src"
+$env:PYTHONPATH = if ([string]::IsNullOrWhiteSpace($env:PYTHONPATH)) {
+    $SourceDir
+}
+else {
+    "$SourceDir;$env:PYTHONPATH"
+}
 $Failures = 0
 $Warnings = 0
 
@@ -44,18 +51,20 @@ Write-Host "Project: $ProjectDir"
 Write-Host ""
 
 $requiredFiles = @(
-    "04_feishu_flow.py",
-    "attendance_hub\core\app_config.py",
-    "attendance_hub\core\attendance_history.py",
-    "attendance_hub\core\daily_plans.py",
-    "attendance_hub\core\holiday_sync.py",
-    "feishu_control_panel.pyw",
-    "run_random.ps1",
-    "run_clock_out.ps1",
+    "hub.ps1",
+    "Attendance Hub.vbs",
+    "src\attendance_hub\automation\feishu_flow.py",
+    "src\attendance_hub\core\app_config.py",
+    "src\attendance_hub\core\attendance_history.py",
+    "src\attendance_hub\core\daily_plans.py",
+    "src\attendance_hub\core\holiday_sync.py",
+    "src\attendance_hub\desktop\control_panel.py",
+    "scripts\runtime\run_morning.ps1",
+    "scripts\runtime\run_clock_out.ps1",
+    "scripts\runtime\run_web.ps1",
     "scripts\operations\schedule_clock_out.ps1",
     "scripts\operations\sync_daily_plan.ps1",
     "scripts\setup\install_daily_task.ps1",
-    "launch_control_panel.vbs",
     "config\calendar_overrides.json",
     "config\daily_plans.json",
     "config\official_holidays.json"
@@ -118,7 +127,7 @@ if ($appiumOk) {
 
 $venvPython = Join-Path $ProjectDir ".venv\Scripts\python.exe"
 if (Test-Path -LiteralPath $venvPython -PathType Leaf) {
-    & $venvPython -c "import appium, selenium" 2>$null
+    & $venvPython -c "import appium, selenium, attendance_hub.server" 2>$null
     if ($LASTEXITCODE -eq 0) {
         Write-Result "PASS" "Python virtual environment and packages are ready."
     }

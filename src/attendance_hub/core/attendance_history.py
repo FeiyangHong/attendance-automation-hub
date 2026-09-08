@@ -8,8 +8,8 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
+from ..paths import PROJECT_DIR
 
-PROJECT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_DB_FILE = PROJECT_DIR / "data" / "attendance_history.db"
 DEFAULT_LOG_ROOT = PROJECT_DIR / "logs"
 
@@ -442,6 +442,7 @@ def _parse_log_observations(log_file: Path) -> list[dict[str, str]]:
 def import_existing_logs(
     log_root: Path = DEFAULT_LOG_ROOT,
     db_file: Path = DEFAULT_DB_FILE,
+    source_name: str = "",
 ) -> dict[str, int]:
     ensure_database(db_file)
     stats = {
@@ -457,7 +458,11 @@ def import_existing_logs(
         file_stat = log_file.stat()
         signature = f"{file_stat.st_size}:{file_stat.st_mtime_ns}"
         relative_name = log_file.relative_to(log_root).as_posix()
-        meta_key = f"log_signature:{relative_name}"
+        source_prefix = source_name.strip("/ ")
+        namespaced_name = (
+            f"{source_prefix}/{relative_name}" if source_prefix else relative_name
+        )
+        meta_key = f"log_signature:{namespaced_name}"
 
         with _connect(db_file) as connection:
             if _meta_value(connection, meta_key) == signature:
@@ -472,7 +477,7 @@ def import_existing_logs(
                 attendance_date=observation["attendance_date"],
                 observed_at=observation["observed_at"],
                 action="log_import",
-                details=f"Imported from {relative_name}",
+                details=f"Imported from {namespaced_name}",
                 db_file=db_file,
             ):
                 stats["observations_added"] += 1

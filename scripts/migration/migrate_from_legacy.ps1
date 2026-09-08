@@ -1,6 +1,7 @@
 param(
     [string]$LegacyPath = "E:\PhoneRemote\feishu_dryrun",
-    [switch]$IncludeLogs
+    [switch]$IncludeLogs,
+    [switch]$LogsOnly
 )
 
 Set-StrictMode -Version Latest
@@ -14,6 +15,14 @@ if (-not (Test-Path -LiteralPath $PythonExe -PathType Leaf)) {
 }
 $arguments = @("-m", "attendance_hub.migrate", "--legacy", $LegacyPath)
 if ($IncludeLogs) { $arguments += "--include-logs" }
+if ($LogsOnly) { $arguments += "--logs-only" }
+$SourceDir = Join-Path $ProjectDir "src"
+$env:PYTHONPATH = if ([string]::IsNullOrWhiteSpace($env:PYTHONPATH)) {
+    $SourceDir
+}
+else {
+    "$SourceDir;$env:PYTHONPATH"
+}
 Push-Location $ProjectDir
 try {
     & $PythonExe @arguments

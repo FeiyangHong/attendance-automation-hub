@@ -5,8 +5,8 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .paths import PROJECT_DIR
 
-PROJECT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG_FILE = PROJECT_DIR / "config" / "remote_config.json"
 
 

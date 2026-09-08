@@ -11,9 +11,13 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$ProjectDir = $PSScriptRoot
+$ProjectDir = [System.IO.Path]::GetFullPath(
+    (Join-Path $PSScriptRoot "..\..")
+)
+$SourceDir = Join-Path $ProjectDir "src"
 $PythonExe = Join-Path $ProjectDir ".venv\Scripts\python.exe"
-$ScriptFile = Join-Path $ProjectDir "04_feishu_flow.py"
+$ScriptFile = Join-Path $SourceDir "attendance_hub\automation\feishu_flow.py"
+$FlowModule = "attendance_hub.automation.feishu_flow"
 $AppiumCmd = Join-Path $env:APPDATA "npm\appium.cmd"
 $AppiumHost = "127.0.0.1"
 $AppiumPort = 4723
@@ -22,6 +26,13 @@ $RetryDelaySeconds = 15
 $ResultFile = Join-Path $ProjectDir "config\clock_out_last_result.json"
 $AppConfigFile = Join-Path $ProjectDir "config\app_config.json"
 $RunId = [guid]::NewGuid().ToString("N")
+
+$env:PYTHONPATH = if ([string]::IsNullOrWhiteSpace($env:PYTHONPATH)) {
+    $SourceDir
+}
+else {
+    "$SourceDir;$env:PYTHONPATH"
+}
 
 $startedAt = Get-Date
 $LogDir = Join-Path (Join-Path $ProjectDir "logs") $startedAt.ToString("yyyy-MM")
@@ -164,7 +175,7 @@ function Ensure-AppiumServer {
 function Invoke-ClockOutFlow {
     $processInfo = New-Object System.Diagnostics.ProcessStartInfo
     $processInfo.FileName = $PythonExe
-    $processInfo.Arguments = "`"$ScriptFile`" --mode clock-out"
+    $processInfo.Arguments = "-m $FlowModule --mode clock-out"
     if ($TestMode) {
         $processInfo.Arguments += " --dry-run"
     }

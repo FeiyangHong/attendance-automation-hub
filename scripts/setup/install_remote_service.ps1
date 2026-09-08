@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 $ProjectDir = [System.IO.Path]::GetFullPath(
     (Join-Path $PSScriptRoot "..\..")
 )
-$Runner = Join-Path $ProjectDir "run_remote_service.ps1"
+$Runner = Join-Path $ProjectDir "scripts\runtime\run_web.ps1"
 $PythonExe = Join-Path $ProjectDir ".venv\Scripts\python.exe"
 $RemoteConfig = Join-Path $ProjectDir "config\remote_config.json"
 $PowerShellExe = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"

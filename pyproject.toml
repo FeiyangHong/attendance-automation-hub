@@ -1,12 +1,42 @@
 [project]
 name = "attendance-automation-hub"
-version = "0.2.0"
+version = "0.3.0"
 description = "Standalone Windows and Android attendance automation with secure private remote control"
 requires-python = ">=3.10"
+dependencies = [
+    "Appium-Python-Client==5.3.1",
+    "selenium==4.36.0",
+    "fastapi==0.128.8",
+    "uvicorn==0.39.0",
+    "Jinja2==3.1.6",
+    "python-multipart==0.0.20",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx==0.28.1",
+    "pytest==8.4.2",
+    "ruff==0.16.6",
+]
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+attendance_hub = ["web/templates/*.html", "web/static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 100

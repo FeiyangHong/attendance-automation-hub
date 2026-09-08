@@ -3,7 +3,10 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$ProjectDir = $PSScriptRoot
+$ProjectDir = [System.IO.Path]::GetFullPath(
+    (Join-Path $PSScriptRoot "..\..")
+)
+$SourceDir = Join-Path $ProjectDir "src"
 $PythonExe = Join-Path $ProjectDir ".venv\Scripts\python.exe"
 $RemoteConfig = Join-Path $ProjectDir "config\remote_config.json"
 $LogDir = Join-Path $ProjectDir "logs\remote_service"
@@ -21,6 +24,12 @@ if ([string]$config.bind_host -notin @("127.0.0.1", "::1", "localhost")) {
 
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 $env:PYTHONUNBUFFERED = "1"
+$env:PYTHONPATH = if ([string]::IsNullOrWhiteSpace($env:PYTHONPATH)) {
+    $SourceDir
+}
+else {
+    "$SourceDir;$env:PYTHONPATH"
+}
 $serviceLog = Join-Path $LogDir "$((Get-Date).ToString('yyyy-MM-dd')).log"
 $previousErrorActionPreference = $ErrorActionPreference
 try {

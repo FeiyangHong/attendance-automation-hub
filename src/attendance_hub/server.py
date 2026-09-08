@@ -36,7 +36,8 @@ from .calendar_service import (
 )
 from .jobs import JOB_KINDS, SENSITIVE_JOB_KINDS, JobManager, JobRejected
 from .security import new_csrf_token, new_session_token, verify_password
-from .settings import PROJECT_DIR, RemoteSettings, load_remote_settings
+from .paths import PACKAGE_DIR
+from .settings import RemoteSettings, load_remote_settings
 from .store import RemoteStore
 from .system_status import status_snapshot
 from .task_sync import synchronize_plan_tasks
@@ -107,7 +108,7 @@ def create_app(settings: RemoteSettings | None = None) -> FastAPI:
     settings.require_authentication_config()
     store = RemoteStore(settings.database_file)
     jobs = JobManager(settings, store)
-    templates = Jinja2Templates(directory=str(PROJECT_DIR / "web" / "templates"))
+    templates = Jinja2Templates(directory=str(PACKAGE_DIR / "web" / "templates"))
     limiter = LoginLimiter()
 
     @asynccontextmanager
@@ -118,7 +119,7 @@ def create_app(settings: RemoteSettings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="Attendance Automation Hub",
-        version="0.1.0",
+        version="0.3.0",
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
@@ -134,7 +135,7 @@ def create_app(settings: RemoteSettings | None = None) -> FastAPI:
     app.add_middleware(GZipMiddleware, minimum_size=800)
     app.mount(
         "/static",
-        StaticFiles(directory=str(PROJECT_DIR / "web" / "static")),
+        StaticFiles(directory=str(PACKAGE_DIR / "web" / "static")),
         name="static",
     )
 

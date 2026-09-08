@@ -31,7 +31,7 @@ appium.cmd --version
 ```powershell
 py -3.10 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\scripts\operations\diagnose_environment.ps1
+.\hub.ps1 diagnose
 ```
 
 手机开启“开发者选项 → USB 调试”，连接后运行 `adb devices -l`，记录状态为 `device` 的序列号。新手机先登录目标飞书账号并确认能进入“工作台 → 假勤”。
@@ -41,7 +41,7 @@ py -3.10 -m venv .venv
 ```powershell
 .\scripts\migration\migrate_from_legacy.ps1 -LegacyPath E:\PhoneRemote\feishu_dryrun -IncludeLogs
 .\scripts\setup\configure_remote.ps1 -DeviceUdid 序列号 -TailscaleUser 你的邮箱 -EnableDevice
-.\run_remote_service.ps1
+.\hub.ps1 web
 ```
 
 打开 `http://127.0.0.1:8765` 检查页面。首次识别测试前建议临时关闭飞书极速打卡；即使脚本不点击，打开飞书仍可能触发极速打卡。
@@ -73,3 +73,12 @@ py -3.10 -m venv .venv
 ```
 
 发布压缩包应包含仓库源码、`config\*.example.json`、诊断/安装/迁移/回滚脚本和文档；不包含 `.venv`、真实配置、日志、截图、数据库或账号资料。
+
+只需要把旧日志追加到已经配置好的新仓库时，使用：
+
+```powershell
+.\scripts\migration\migrate_from_legacy.ps1 `
+    -LegacyPath E:\PhoneRemote\feishu_dryrun -LogsOnly
+```
+
+原始文件归档在 `logs\legacy\feishu_dryrun\`，解析出的实际打卡时间写入现有历史数据库；当前配置和安全开关保持不变。

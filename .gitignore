@@ -1,6 +1,9 @@
 # Python environments and caches
 .venv/
 __pycache__/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
 *.py[cod]
 
 # Runtime output and personal attendance history
@@ -13,6 +16,7 @@ config/app_config.json
 config/remote_config.json
 
 # Generated packages and temporary files
+dist/
 *.zip
 *.tmp
 *.bak

@@ -26,7 +26,6 @@ from attendance_hub.core.attendance_history import (
 )
 from attendance_hub.core.daily_plans import (
     day_plan,
-    load_daily_plans,
     month_plans,
     set_day_plan,
 )
@@ -35,12 +34,12 @@ from attendance_hub.core.holiday_sync import (
     load_official_calendar,
     sync_year,
 )
+from attendance_hub.paths import PROJECT_DIR
 
 
-PROJECT_DIR = Path(__file__).resolve().parent
-RUNNER_SCRIPT = PROJECT_DIR / "run_random.ps1"
+RUNNER_SCRIPT = PROJECT_DIR / "scripts" / "runtime" / "run_morning.ps1"
 INSTALL_SCRIPT = PROJECT_DIR / "scripts" / "setup" / "install_daily_task.ps1"
-CLOCK_OUT_RUNNER_SCRIPT = PROJECT_DIR / "run_clock_out.ps1"
+CLOCK_OUT_RUNNER_SCRIPT = PROJECT_DIR / "scripts" / "runtime" / "run_clock_out.ps1"
 CLOCK_OUT_SCHEDULE_SCRIPT = (
     PROJECT_DIR / "scripts" / "operations" / "schedule_clock_out.ps1"
 )

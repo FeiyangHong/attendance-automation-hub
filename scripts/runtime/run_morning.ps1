@@ -10,18 +10,30 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$ProjectDir = $PSScriptRoot
+$ProjectDir = [System.IO.Path]::GetFullPath(
+    (Join-Path $PSScriptRoot "..\..")
+)
+$SourceDir = Join-Path $ProjectDir "src"
 $PythonExe = Join-Path $ProjectDir ".venv\Scripts\python.exe"
-$ScriptFile = Join-Path $ProjectDir "04_feishu_flow.py"
+$ScriptFile = Join-Path $SourceDir "attendance_hub\automation\feishu_flow.py"
+$FlowModule = "attendance_hub.automation.feishu_flow"
 $CalendarFile = Join-Path $ProjectDir "config\calendar_overrides.json"
 $OfficialCalendarFile = Join-Path $ProjectDir "config\official_holidays.json"
 $MorningPlanFile = Join-Path $ProjectDir "config\morning_current_plan.json"
 $DailyPlansFile = Join-Path $ProjectDir "config\daily_plans.json"
-$HolidaySyncScript = Join-Path $ProjectDir "attendance_hub\core\holiday_sync.py"
+$HolidaySyncScript = Join-Path $SourceDir "attendance_hub\core\holiday_sync.py"
+$HolidaySyncModule = "attendance_hub.core.holiday_sync"
 $AppConfigFile = Join-Path $ProjectDir "config\app_config.json"
 $AppiumCmd = Join-Path $env:APPDATA "npm\appium.cmd"
 $AppiumHost = "127.0.0.1"
 $AppiumPort = 4723
+
+$env:PYTHONPATH = if ([string]::IsNullOrWhiteSpace($env:PYTHONPATH)) {
+    $SourceDir
+}
+else {
+    "$SourceDir;$env:PYTHONPATH"
+}
 
 $WindowStartHour = 9
 $WindowStartMinute = 0
@@ -321,7 +333,7 @@ function Ensure-OfficialCalendarYear {
 
     try {
         $ErrorActionPreference = "Continue"
-        $syncOutput = & $PythonExe $HolidaySyncScript `
+        $syncOutput = & $PythonExe -m $HolidaySyncModule `
             --year $Year `
             --cache $OfficialCalendarFile 2>&1
         $syncExitCode = $LASTEXITCODE
@@ -401,7 +413,7 @@ function Invoke-PythonFlow {
         return 1
     }
 
-    $pythonArguments = @($ScriptFile)
+    $pythonArguments = @("-m", $FlowModule)
 
     if ($DryRun) {
         $pythonArguments += "--dry-run"

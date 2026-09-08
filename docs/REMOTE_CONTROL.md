@@ -9,7 +9,7 @@ Web 服务仅监听电脑本机 `127.0.0.1:8765`。Tailscale Serve 将它以 tai
 1. 在打卡电脑、远程电脑/安卓手机安装 Tailscale，并登录同一网络。
 2. 运行 `scripts/setup/configure_remote.ps1` 设置网页登录密码、ADB 序列号和允许访问的 Tailscale 邮箱。
 3. 管理员 PowerShell 运行 `scripts/setup/setup_tailscale_serve.ps1`。它使用持久化的 `tailscale serve --bg`，不会启用公开的 Funnel。
-4. 运行 `scripts/setup/install_remote_service.ps1` 安装登录后自启任务。安装动作不会立即启动服务；可注销重登，或先手动运行根目录的 `run_remote_service.ps1`。
+4. 运行 `scripts/setup/install_remote_service.ps1` 安装登录后自启任务。安装动作不会立即启动服务；可注销重登，或先运行根目录的 `hub.ps1 web`。
 
 Tailscale 账户登录和新设备授权必须由你本人完成。官方文档：[Windows 安装](https://tailscale.com/docs/install/windows)、[Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve)。
 

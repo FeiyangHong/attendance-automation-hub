@@ -5,8 +5,8 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
+from ..paths import PROJECT_DIR
 
-PROJECT_DIR = Path(__file__).resolve().parents[2]
 DEFAULT_PLAN_FILE = PROJECT_DIR / "config" / "daily_plans.json"
 
 

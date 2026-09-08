@@ -20,6 +20,13 @@ py -3.10 -m venv .venv
     -LegacyPath E:\PhoneRemote\feishu_dryrun -IncludeLogs
 ```
 
+仅追加归档旧日志并导入历史时间，不改变现有配置：
+
+```powershell
+.\scripts\migration\migrate_from_legacy.ps1 `
+    -LegacyPath E:\PhoneRemote\feishu_dryrun -LogsOnly
+```
+
 配置网页登录密码和手机，但暂不允许真实打卡：
 
 ```powershell
@@ -30,7 +37,7 @@ py -3.10 -m venv .venv
 本机试运行 Web：
 
 ```powershell
-.\run_remote_service.ps1
+.\hub.ps1 web
 ```
 
 浏览器打开 `http://127.0.0.1:8765`。确认无误后参照
@@ -40,20 +47,23 @@ py -3.10 -m venv .venv
 ## 仓库结构
 
 ```text
-attendance_hub/       Python 应用与共享核心模块
-config/               示例配置及本机运行配置
-docs/                 安装、迁移和设计文档
+src/attendance_hub/   Python应用、桌面界面和Web资源
 scripts/
+  runtime/            上班、下班和Web运行器
   setup/              首次配置、任务和 Tailscale 安装
   operations/         诊断、日计划同步、scrcpy 和临时任务
   migration/          迁移、切换与回滚
   release/            发布包构建
+config/               示例配置及本机运行配置
+docs/                 安装与迁移文档
 tests/                自动测试
-tools/adb/            ADB 探测工具
-web/                  Web 模板和静态资源
+logs/                 按月日志及旧仓库日志归档
+data/                 历史、任务和审计数据库
+artifacts/            失败截图与XML
+dist/                 发布压缩包
 ```
 
-根目录只保留稳定运行入口和桌面程序，保证既有计划任务与快捷方式继续有效。
+根目录只保留项目说明、依赖和两个公共入口。
 
 ## 安全边界
 
@@ -67,10 +77,12 @@ web/                  Web 模板和静态资源
 
 ## 常用入口
 
-- 桌面面板：双击 `launch_control_panel.vbs`
-- 环境诊断：`.\scripts\operations\diagnose_environment.ps1`
-- Web 服务：`.\run_remote_service.ps1`
+- 桌面面板：双击 `Attendance Hub.vbs`，或运行 `.\hub.ps1 desktop`
+- 环境诊断：`.\hub.ps1 diagnose`
+- Web 服务：`.\hub.ps1 web`
+- 立即上班：`.\hub.ps1 clock-in`
+- 立即下班：`.\hub.ps1 clock-out`
 - 测试：`.\.venv\Scripts\python.exe -m pytest`
 - 紧急回滚：`.\scripts\migration\rollback_to_legacy.ps1 -ConfirmRollback ROLLBACK`
 
-运行数据、密码配置、截图、日志和 `.venv` 均被 Git/发布包排除。
+运行数据、密码配置、截图、日志、发布包和 `.venv` 均被 Git 排除。
