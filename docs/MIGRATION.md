@@ -46,6 +46,17 @@ py -3.10 -m venv .venv
 
 打开 `http://127.0.0.1:8765` 检查页面。首次识别测试前建议临时关闭飞书极速打卡；即使脚本不点击，打开飞书仍可能触发极速打卡。
 
+无需真实点击的完整检查：
+
+```powershell
+.\hub.ps1 diagnose
+.\scripts\runtime\run_morning.ps1 -TestMode -Immediate
+.\scripts\runtime\run_clock_out.ps1 -TestMode
+.\scripts\migration\cutover_to_hub.ps1 -Preview
+```
+
+最后一条只预览正式切换会停用哪些旧任务，不修改系统状态。
+
 ## 4. 私网访问
 
 在电脑和远程安卓/电脑安装 Tailscale，登录同一 tailnet。在打卡电脑的管理员 PowerShell 运行：
@@ -66,7 +77,8 @@ py -3.10 -m venv .venv
 .\scripts\migration\cutover_to_hub.ps1 -ConfirmCutover CUTOVER
 ```
 
-脚本会先安装并验证新任务，随后只停用旧每日任务，不删除旧仓库。需要恢复时：
+脚本会验证新每日任务、未来单日计划和 Web 服务，然后停用所有仍指向旧仓库的
+计划任务；旧任务暂时保留作为回滚保障，但不会再运行。需要恢复时：
 
 ```powershell
 .\scripts\migration\rollback_to_legacy.ps1 -ConfirmRollback ROLLBACK

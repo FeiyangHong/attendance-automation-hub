@@ -119,7 +119,7 @@ def create_app(settings: RemoteSettings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="Attendance Automation Hub",
-        version="0.3.0",
+        version="0.3.1",
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
