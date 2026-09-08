@@ -19,7 +19,7 @@ SOURCE_LABELS = {
     "script_clock_out": "脚本下班打卡",
     "script_update": "脚本更新打卡",
     "test_observation": "测试时页面识别",
-    "log_import": "旧日志导入",
+    "log_import": "日志导入",
     "unconfirmed_click": "点击后待确认",
 }
 SOURCE_PRIORITY = {

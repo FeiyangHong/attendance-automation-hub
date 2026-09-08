@@ -1,11 +1,9 @@
 import json
-import sqlite3
 from pathlib import Path
 
 import pytest
 
 from attendance_hub.jobs import JobManager, JobRejected
-from attendance_hub.migrate import import_legacy_logs, migrate
 from attendance_hub.settings import RemoteSettings
 from attendance_hub.store import RemoteStore
 from attendance_hub import system_status
@@ -49,62 +47,3 @@ def test_failure_classification_is_specific():
     assert JobManager._failure_category(["DEVICE BUSY"], 3) == "task_conflict"
     assert JobManager._failure_category(["Appium did not become ready"], 1) == "appium_failure"
     assert JobManager._failure_category(["CROSS-DAY SAFETY"], 5) == "cross_day"
-
-
-def test_migration_forces_safety_locks_off(tmp_path, monkeypatch):
-    legacy = tmp_path / "legacy"
-    target = tmp_path / "target"
-    (legacy / "config").mkdir(parents=True)
-    (legacy / "data").mkdir()
-    (legacy / "04_feishu_flow.py").write_text("# marker", encoding="utf-8")
-    (legacy / "config" / "app_config.json").write_text(
-        json.dumps(
-            {
-                "device_udid": "serial",
-                "device_access_enabled": True,
-                "real_actions_enabled": True,
-            }
-        ),
-        encoding="utf-8",
-    )
-    with sqlite3.connect(legacy / "data" / "attendance_history.db") as database:
-        database.execute("CREATE TABLE sample(value TEXT)")
-        database.execute("INSERT INTO sample VALUES ('preserved')")
-
-    monkeypatch.setattr("attendance_hub.migrate.PROJECT_DIR", target)
-    migrate(legacy)
-    result = json.loads((target / "config" / "app_config.json").read_text(encoding="utf-8"))
-    assert result["device_udid"] == "serial"
-    assert result["device_access_enabled"] is False
-    assert result["real_actions_enabled"] is False
-    with sqlite3.connect(target / "data" / "attendance_history.db") as database:
-        assert database.execute("SELECT value FROM sample").fetchone()[0] == "preserved"
-
-
-def test_logs_only_migration_preserves_existing_configuration(tmp_path, monkeypatch):
-    legacy = tmp_path / "legacy"
-    target = tmp_path / "target"
-    (legacy / "logs" / "2026-09").mkdir(parents=True)
-    (legacy / "04_feishu_flow.py").write_text("# marker", encoding="utf-8")
-    (legacy / "logs" / "2026-09" / "2026-09-01.log").write_text(
-        "2026-09-01 09:05:00 Scheduler completed successfully.\n",
-        encoding="ascii",
-    )
-    (target / "config").mkdir(parents=True)
-    app_config = target / "config" / "app_config.json"
-    expected = {"device_access_enabled": True, "real_actions_enabled": True}
-    app_config.write_text(json.dumps(expected), encoding="utf-8")
-
-    monkeypatch.setattr("attendance_hub.migrate.PROJECT_DIR", target)
-    messages = import_legacy_logs(legacy)
-
-    assert json.loads(app_config.read_text(encoding="utf-8")) == expected
-    assert (
-        target
-        / "logs"
-        / "legacy"
-        / "legacy"
-        / "2026-09"
-        / "2026-09-01.log"
-    ).is_file()
-    assert len(messages) == 2

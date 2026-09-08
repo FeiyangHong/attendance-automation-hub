@@ -22,6 +22,7 @@ foreach ($required in @($Runner, $PythonExe, $RemoteConfig)) {
 $arguments = @(
     "-NoProfile"
     "-NonInteractive"
+    "-WindowStyle Hidden"
     "-ExecutionPolicy Bypass"
     "-File `"$Runner`""
 ) -join " "

@@ -1,6 +1,6 @@
 [project]
 name = "attendance-automation-hub"
-version = "0.3.1"
+version = "1.0.0"
 description = "Standalone Windows and Android attendance automation with secure private remote control"
 requires-python = ">=3.10"
 dependencies = [

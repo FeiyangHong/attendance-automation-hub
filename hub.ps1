@@ -10,9 +10,6 @@ param(
         "install-web",
         "install-daily",
         "tailscale",
-        "migrate",
-        "cutover",
-        "rollback",
         "build"
     )]
     [string]$Command = "desktop",
@@ -39,9 +36,6 @@ $scripts = @{
     "install-web" = "scripts\setup\install_remote_service.ps1"
     "install-daily" = "scripts\setup\install_daily_task.ps1"
     tailscale = "scripts\setup\setup_tailscale_serve.ps1"
-    migrate = "scripts\migration\migrate_from_legacy.ps1"
-    cutover = "scripts\migration\cutover_to_hub.ps1"
-    rollback = "scripts\migration\rollback_to_legacy.ps1"
     build = "scripts\release\build_release.ps1"
 }
 

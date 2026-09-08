@@ -19,12 +19,12 @@ def synchronize_plan_tasks(
     clock_in: str,
     clock_out: str,
 ) -> dict[str, Any]:
-    """Update only this successor's one-time tasks after production cutover."""
+    """Update one-time tasks only after real actions are explicitly enabled."""
     app_config = load_app_config(settings.app_config_file)
     if not (app_config.device_access_enabled and app_config.real_actions_enabled):
         return {
             "status": "skipped",
-            "message": "System task sync remains disabled until explicit production cutover.",
+            "message": "System task sync remains disabled until real actions are enabled.",
         }
 
     powershell = str(
