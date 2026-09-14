@@ -56,6 +56,7 @@ def test_dashboard_contains_daily_execution_status(tmp_path, monkeypatch):
         assert 'id="last-task-result"' in response.text
         assert 'id="today-arrangement"' in response.text
         assert 'id="daily-task-progress"' in response.text
+        assert 'id="toggle-job-history"' in response.text
         assert "每日自动任务" in response.text
         assert "/static/app.css?v=" in response.text
         assert "/static/app.js?v=" in response.text

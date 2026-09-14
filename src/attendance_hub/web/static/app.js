@@ -1,5 +1,16 @@
 const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
-const state = { year: new Date().getFullYear(), month: new Date().getMonth() + 1, selectedDate: '', activeJobId: '', showCalendarTimes: false };
+const state = { year: new Date().getFullYear(), month: new Date().getMonth() + 1, selectedDate: '', activeJobId: '', showCalendarTimes: false, showAllJobs: false, jobs: [] };
+const collapsedJobCount = 3;
+const jobKindLabels = {
+  clock_in: '上班打卡',
+  clock_out: '下班打卡 / 更新',
+  dry_run_clock_in: '上班安全测试',
+  dry_run_clock_out: '下班安全测试',
+  diagnostic: '环境诊断',
+  scrcpy_start: '启动手机画面',
+  task_enable: '启用每日任务',
+  task_disable: '暂停每日任务',
+};
 
 async function api(path, options = {}) {
   const headers = { ...(options.headers || {}) };
@@ -32,6 +43,10 @@ function setStatus(id, text, level = '') {
 function formatPlan(plan) {
   if (!plan || (!plan.clock_in && !plan.clock_out)) return '未设置';
   return [plan.clock_in ? `上 ${plan.clock_in}` : '', plan.clock_out ? `下 ${plan.clock_out}` : ''].filter(Boolean).join(' / ');
+}
+
+function formatJobKind(kind) {
+  return jobKindLabels[kind] ? `${kind}（${jobKindLabels[kind]}）` : kind;
 }
 
 function formatTaskResult(value) {
@@ -134,21 +149,33 @@ function renderActiveJob(job) {
   state.activeJobId = job.id;
   container.className = 'job-row';
   container.replaceChildren();
-  [job.kind, job.status, job.message || '等待执行'].forEach((value, index) => { const span = document.createElement('span'); span.textContent = value; if (index === 2) span.className = 'job-message'; container.append(span); });
+  [formatJobKind(job.kind), job.status, job.message || '等待执行'].forEach((value, index) => { const span = document.createElement('span'); span.textContent = value; if (index === 2) span.className = 'job-message'; container.append(span); });
   cancel.hidden = false;
+}
+
+function renderJobs() {
+  const list = document.getElementById('job-history');
+  const toggle = document.getElementById('toggle-job-history');
+  list.replaceChildren();
+  const visibleJobs = state.showAllJobs ? state.jobs : state.jobs.slice(0, collapsedJobCount);
+  visibleJobs.forEach(job => {
+    const row = document.createElement('div'); row.className = 'job-row';
+    const detail = job.failure_category ? `[${job.failure_category}] ${job.message || ''}` : job.message || '--';
+    const values = [formatJobKind(job.kind), job.status, detail, job.created_at.replace('T', ' ')];
+    values.forEach((value, index) => { const span = document.createElement('span'); span.textContent = value; if (index === 2) span.className = 'job-message'; row.append(span); });
+    list.append(row);
+  });
+  const hiddenCount = Math.max(0, state.jobs.length - collapsedJobCount);
+  toggle.hidden = hiddenCount === 0;
+  toggle.textContent = state.showAllJobs ? '收起' : `展开更多（${hiddenCount}）`;
+  toggle.setAttribute('aria-expanded', String(state.showAllJobs));
 }
 
 async function refreshJobs() {
   try {
-    const data = await api('/api/jobs?limit=8');
-    const list = document.getElementById('job-history'); list.replaceChildren();
-    data.jobs.forEach(job => {
-      const row = document.createElement('div'); row.className = 'job-row';
-      const detail = job.failure_category ? `[${job.failure_category}] ${job.message || ''}` : job.message || '--';
-      const values = [job.kind, job.status, detail, job.created_at.replace('T', ' ')];
-      values.forEach((value, index) => { const span = document.createElement('span'); span.textContent = value; if (index === 2) span.className = 'job-message'; row.append(span); });
-      list.append(row);
-    });
+    const data = await api('/api/jobs?limit=30');
+    state.jobs = data.jobs || [];
+    renderJobs();
   } catch (error) { toast(error.message, true); }
 }
 
@@ -222,6 +249,7 @@ document.querySelectorAll('[data-job]').forEach(button => button.addEventListene
 document.getElementById('refresh-button').addEventListener('click', async () => { await Promise.all([refreshStatus(), refreshJobs(), loadCalendar(), loadArtifacts()]); toast('状态已刷新。'); });
 document.getElementById('logout-button').addEventListener('click', async () => { await api('/api/logout', { method: 'POST', body: '{}' }); location.href = '/login'; });
 document.getElementById('cancel-job').addEventListener('click', async () => { if (!state.activeJobId || !confirm('停止当前任务？')) return; try { await api(`/api/jobs/${state.activeJobId}/cancel`, { method: 'POST', body: '{}' }); toast('已请求停止任务。'); } catch (error) { toast(error.message, true); } });
+document.getElementById('toggle-job-history').addEventListener('click', event => { state.showAllJobs = !state.showAllJobs; event.currentTarget.setAttribute('aria-expanded', String(state.showAllJobs)); renderJobs(); });
 document.getElementById('previous-month').addEventListener('click', () => { state.month -= 1; if (state.month < 1) { state.month = 12; state.year -= 1; } loadCalendar(); });
 document.getElementById('next-month').addEventListener('click', () => { state.month += 1; if (state.month > 12) { state.month = 1; state.year += 1; } loadCalendar(); });
 document.getElementById('toggle-calendar-times').addEventListener('click', event => { state.showCalendarTimes = !state.showCalendarTimes; event.currentTarget.textContent = state.showCalendarTimes ? '隐藏时间' : '显示时间'; event.currentTarget.setAttribute('aria-pressed', String(state.showCalendarTimes)); loadCalendar(); });

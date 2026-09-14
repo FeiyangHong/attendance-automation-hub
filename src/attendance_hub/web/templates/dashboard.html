@@ -67,7 +67,10 @@
       <div class="section-heading"><div><p class="eyebrow">EXECUTION</p><h2>任务进度</h2></div><button id="cancel-job" class="ghost danger-text" hidden>停止任务</button></div>
       <p class="progress-heading">每日自动任务</p>
       <div id="daily-task-progress" class="empty-state" aria-live="polite">尚无每日任务执行记录。</div>
-      <p class="progress-heading">远程操作任务</p>
+      <div class="progress-heading-row">
+        <p class="progress-heading">远程操作任务</p>
+        <button id="toggle-job-history" class="ghost compact" type="button" aria-expanded="false" hidden>展开更多</button>
+      </div>
       <div id="active-job" class="empty-state">当前没有执行中的任务。</div>
       <div id="job-history" class="job-list"></div>
     </section>
