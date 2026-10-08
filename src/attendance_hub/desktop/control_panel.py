@@ -37,6 +37,13 @@ from attendance_hub.core.holiday_sync import (
     sync_year,
 )
 from attendance_hub.paths import PROJECT_DIR
+from attendance_hub.desktop.appearance import (
+    ICON_CHOICES,
+    apply_icon_selection,
+    icon_choice,
+    icon_path,
+    load_icon_selection,
+)
 
 
 RUNNER_SCRIPT = PROJECT_DIR / "scripts" / "runtime" / "run_morning.ps1"
@@ -447,6 +454,9 @@ class ControlPanel:
         self.history_window: tk.Toplevel | None = None
         self.daily_plan_window: tk.Toplevel | None = None
         self.morning_window_dialog: tk.Toplevel | None = None
+        self.icon_picker_window: tk.Toplevel | None = None
+        self.icon_apply_running = False
+        self.selected_icon = load_icon_selection()
         self.calendar_sync_running = False
         self.history_initialized = False
         self.calendar_selected_date = date.today()
@@ -465,6 +475,7 @@ class ControlPanel:
 
         self._configure_styles()
         self._build_ui()
+        self._set_app_icon(self.selected_icon)
         self._pump_events()
         self.refresh_status()
         self.root.after(700, self._start_automatic_calendar_sync)
@@ -553,9 +564,14 @@ class ControlPanel:
 
         header = tk.Frame(outer, bg=COLORS["window"])
         header.pack(fill="x", pady=(0, 18))
+        self._button(header, "图标外观", self.open_icon_picker, compact=True).pack(
+            side="right", padx=(12, 0)
+        )
+        heading = tk.Frame(header, bg=COLORS["window"])
+        heading.pack(side="left")
 
         tk.Label(
-            header,
+            heading,
             text="飞书自动化控制中心",
             font=("Microsoft YaHei UI", 22, "bold"),
             fg=COLORS["text"],
@@ -563,7 +579,7 @@ class ControlPanel:
         ).pack(anchor="w")
 
         tk.Label(
-            header,
+            heading,
             text="每日任务、设备状态、日志和手机远程控制集中管理",
             font=("Microsoft YaHei UI", 10),
             fg=COLORS["muted"],
@@ -1641,6 +1657,20 @@ class ControlPanel:
                             self.morning_window_error.configure(text=message)
                     self.append_log(message)
                     self.refresh_status()
+                elif kind == "icon_selection_done":
+                    ok, selected, message = payload
+                    self.icon_apply_running = False
+                    if ok:
+                        self.selected_icon = selected
+                        self._set_app_icon(selected)
+                    if self.icon_picker_window and self.icon_picker_window.winfo_exists():
+                        self.icon_apply_button.configure(state="normal", text="应用到面板与快捷方式")
+                        self.icon_picker_message.configure(
+                            text=("已保存。桌面图标可能稍后刷新。" if ok else message),
+                            fg=COLORS["success"] if ok else COLORS["danger"],
+                        )
+                        self._refresh_icon_picker()
+                    self.append_log(message)
                 elif kind == "calendar_sync_done":
                     self._apply_calendar_sync_result(payload)
                 elif kind == "clock_out_done":
@@ -1654,6 +1684,131 @@ class ControlPanel:
         except queue.Empty:
             pass
         self.root.after(100, self._pump_events)
+
+    def _set_app_icon(self, selected: str | None):
+        if selected is None:
+            return
+        try:
+            self.app_icon_image = tk.PhotoImage(file=str(icon_path(selected, "-preview.png")))
+            self.root.iconphoto(True, self.app_icon_image)
+            if os.name == "nt":
+                self.root.iconbitmap(default=str(icon_path(selected)))
+            if self.icon_picker_window and self.icon_picker_window.winfo_exists():
+                self.icon_picker_window.iconphoto(False, self.app_icon_image)
+        except (OSError, ValueError, tk.TclError) as exc:
+            self.append_log(f"Unable to load desktop icon: {exc}")
+
+    def open_icon_picker(self):
+        if self.icon_picker_window and self.icon_picker_window.winfo_exists():
+            self.icon_picker_window.lift()
+            return
+        window = tk.Toplevel(self.root)
+        self.icon_picker_window = window
+        window.title("图标外观")
+        window.configure(bg=COLORS["panel"])
+        window.resizable(False, False)
+        window.transient(self.root)
+
+        def close():
+            if not self.icon_apply_running:
+                window.destroy()
+                self.icon_picker_window = None
+
+        window.protocol("WM_DELETE_WINDOW", close)
+        body = tk.Frame(window, bg=COLORS["panel"], padx=22, pady=20)
+        body.pack(fill="both", expand=True)
+        tk.Label(
+            body, text="选择图标外观", font=("Microsoft YaHei UI", 15, "bold"),
+            bg=COLORS["panel"], fg=COLORS["text"],
+        ).pack(anchor="w")
+        self.icon_picker_current = tk.Label(
+            body, bg=COLORS["panel"], fg=COLORS["muted"], font=("Microsoft YaHei UI", 9),
+        )
+        self.icon_picker_current.pack(anchor="w", pady=(5, 15))
+        self.icon_picker_var = tk.StringVar(value=self.selected_icon or "c2")
+        self.icon_picker_images = []
+        self.icon_picker_cards = {}
+        choices = tk.Frame(body, bg=COLORS["panel"])
+        choices.pack(fill="x")
+        for column, choice in enumerate(ICON_CHOICES):
+            card = tk.Frame(choices, bg=COLORS["panel_alt"], highlightthickness=2)
+            card.grid(row=0, column=column, sticky="nsew", padx=5)
+            choices.columnconfigure(column, weight=1)
+            self.icon_picker_cards[choice.id] = card
+
+            def select(value=choice.id):
+                if not self.icon_apply_running:
+                    self.icon_picker_var.set(value)
+                    self._refresh_icon_picker()
+
+            try:
+                preview = tk.PhotoImage(file=str(icon_path(choice.id, "-preview.png")))
+                self.icon_picker_images.append(preview)
+            except tk.TclError:
+                preview = None
+            tk.Button(
+                card, image=preview, text="预览缺失" if preview is None else "",
+                command=select, bg=COLORS["panel_alt"], activebackground=COLORS["panel_alt"],
+                fg=COLORS["text"], activeforeground=COLORS["text"],
+                borderwidth=0, relief="flat", cursor="hand2", padx=25, pady=16,
+            ).pack()
+            tk.Radiobutton(
+                card, text=choice.label, variable=self.icon_picker_var, value=choice.id,
+                command=self._refresh_icon_picker, font=("Microsoft YaHei UI", 10, "bold"),
+                fg=COLORS["text"], bg=COLORS["panel_alt"], selectcolor=COLORS["panel_alt"],
+                activebackground=COLORS["panel_alt"], activeforeground=COLORS["text"],
+            ).pack(padx=8)
+            tk.Label(
+                card, text=choice.description, font=("Microsoft YaHei UI", 9),
+                bg=COLORS["panel_alt"], fg=COLORS["muted"],
+            ).pack(padx=10, pady=(5, 15))
+        tk.Label(
+            body, text="只调整外观，不修改打卡、计划任务或快捷方式的启动目标。\n"
+            "未找到本仓库的桌面快捷方式时，会创建 Attendance Hub.lnk。",
+            font=("Microsoft YaHei UI", 9), bg=COLORS["panel"], fg=COLORS["muted"],
+            justify="left",
+        ).pack(anchor="w", pady=(15, 8))
+        self.icon_picker_message = tk.Label(
+            body, text="点击候选图标选择，再点击应用。", wraplength=660, justify="left",
+            font=("Microsoft YaHei UI", 9), bg=COLORS["panel"], fg=COLORS["muted"],
+        )
+        self.icon_picker_message.pack(anchor="w")
+        actions = tk.Frame(body, bg=COLORS["panel"])
+        actions.pack(fill="x", pady=(14, 0))
+        self.icon_apply_button = self._button(
+            actions, "应用到面板与快捷方式", self._apply_selected_icon, primary=True,
+        )
+        self.icon_apply_button.pack(side="left")
+        self._button(actions, "关闭", close).pack(side="right")
+        self._refresh_icon_picker()
+
+    def _refresh_icon_picker(self):
+        current = icon_choice(self.selected_icon).label if self.selected_icon else "系统默认（尚未选择）"
+        self.icon_picker_current.configure(text=f"当前应用：{current}")
+        selected = self.icon_picker_var.get()
+        for name, card in self.icon_picker_cards.items():
+            card.configure(
+                highlightbackground=COLORS["accent"] if name == selected else COLORS["border"],
+            )
+
+    def _apply_selected_icon(self):
+        if self.icon_apply_running:
+            return
+        selected = self.icon_picker_var.get()
+        self.icon_apply_running = True
+        self.icon_apply_button.configure(state="disabled", text="正在应用...")
+        self.icon_picker_message.configure(text="正在保存选择并更新本仓库的快捷方式。", fg=COLORS["muted"])
+
+        def worker():
+            try:
+                message = apply_icon_selection(selected)
+                ok = True
+            except Exception as exc:
+                message = str(exc)
+                ok = False
+            self.events.put(("icon_selection_done", (ok, selected, message)))
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def install_task(self):
         if not INSTALL_SCRIPT.is_file():

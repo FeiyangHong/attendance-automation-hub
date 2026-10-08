@@ -32,6 +32,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 attendance_hub = ["web/templates/*.html", "web/static/*"]
+"attendance_hub.desktop" = ["assets/icons/*.png", "assets/icons/*.ico", "assets/icons/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

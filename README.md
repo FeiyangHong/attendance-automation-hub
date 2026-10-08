@@ -173,6 +173,12 @@ Enable-ScheduledTask -TaskName "Attendance Hub Morning Clock-In"
 Disable-ScheduledTask -TaskName "Attendance Hub Morning Clock-In"
 ```
 
+Use **图标外观** (Icon appearance) at the top right of the desktop panel to preview and
+switch between C2 (Apricot plan), D (Remote connection), and E (Two-period calendar).
+Apply updates the panel and desktop shortcuts targeting this checkout, and remembers
+your choice in `config\desktop_appearance.json`. If none exists, it creates
+`Attendance Hub.lnk`. Attendance tasks and shortcut launch targets are unchanged.
+
 Closing the desktop panel does not affect scheduled tasks. If the remote Web page stops
 responding, restart its background service:
 

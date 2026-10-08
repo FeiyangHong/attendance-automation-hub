@@ -13,6 +13,7 @@ data/
 config/clock_out_last_result.json
 config/morning_current_plan.json
 config/morning_window.json
+config/desktop_appearance.json
 config/app_config.json
 config/remote_config.json
 

@@ -156,6 +156,10 @@ Enable-ScheduledTask -TaskName "Attendance Hub Morning Clock-In"
 Disable-ScheduledTask -TaskName "Attendance Hub Morning Clock-In"
 ```
 
+桌面面板右上角“图标外观”可预览并切换 C2（杏色计划）、D（双端连接）、E（双时段计划）。
+点击“应用”后同步面板与本仓库的桌面快捷方式，重启面板后保留选择；不影响打卡任务。
+没有对应快捷方式时会创建 `Attendance Hub.lnk`。选择保存在 `config\desktop_appearance.json`。
+
 关闭桌面面板不影响计划任务。远程网页中断时重启后台服务：
 
 ```powershell
