@@ -1,5 +1,6 @@
 param(
-    [string]$TaskName = "Attendance Hub Morning Clock-In"
+    [string]$TaskName = "Attendance Hub Morning Clock-In",
+    [switch]$UpdateOnly
 )
 
 Set-StrictMode -Version Latest
@@ -9,6 +10,8 @@ $ProjectDir = [System.IO.Path]::GetFullPath(
     (Join-Path $PSScriptRoot "..\..")
 )
 $RunnerScript = Join-Path $ProjectDir "scripts\runtime\run_morning.ps1"
+. (Join-Path $ProjectDir "scripts\runtime\morning_window.ps1")
+$window = Get-MorningWindow -ProjectDir $ProjectDir
 $PowerShellExe = Join-Path $env:SystemRoot `
     "System32\WindowsPowerShell\v1.0\powershell.exe"
 
@@ -28,19 +31,39 @@ $action = New-ScheduledTaskAction `
     -Argument $actionArguments `
     -WorkingDirectory $ProjectDir
 
-# Start daily at 09:00 and catch up after shutdown or sleep.
+# Start at the configured window opening and catch up within the remaining window.
 $trigger = New-ScheduledTaskTrigger `
     -Daily `
-    -At "09:00"
+    -At $window.StartText
+
+$executionLimit = New-TimeSpan -Minutes ([Math]::Max(60, $window.DurationMinutes + 30))
+$description = "Feishu clock-in randomized over the remaining $($window.StartText)-$($window.EndText) window"
+$existingTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+if ($UpdateOnly) {
+    if ($null -eq $existingTask) {
+        Write-Output "Window saved; daily task is not installed."
+        exit 0
+    }
+    $existingTask.Settings.ExecutionTimeLimit = [System.Xml.XmlConvert]::ToString($executionLimit)
+    $existingTask.Triggers = @($trigger)
+    $existingTask.Description = $description
+    Set-ScheduledTask -InputObject $existingTask | Out-Null
+    Write-Output "Daily trigger updated to $($window.StartText); enabled state preserved."
+    exit 0
+}
 
 $settings = New-ScheduledTaskSettingsSet `
     -StartWhenAvailable `
     -RestartCount 5 `
     -RestartInterval (New-TimeSpan -Minutes 1) `
-    -ExecutionTimeLimit (New-TimeSpan -Hours 1) `
+    -ExecutionTimeLimit $executionLimit `
     -MultipleInstances IgnoreNew `
     -AllowStartIfOnBatteries `
     -DontStopIfGoingOnBatteries
+
+if ($null -ne $existingTask -and -not $existingTask.Settings.Enabled) {
+    $settings.Enabled = $false
+}
 
 # Appium/Android automation requires the current interactive desktop session.
 $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
@@ -54,7 +77,7 @@ $task = New-ScheduledTask `
     -Trigger $trigger `
     -Settings $settings `
     -Principal $principal `
-    -Description "Feishu morning clock-in randomized over the remaining 09:00-09:30 window"
+    -Description $description
 
 Register-ScheduledTask `
     -TaskName $TaskName `

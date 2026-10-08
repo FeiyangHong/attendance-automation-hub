@@ -34,6 +34,7 @@
     <section class="hero-grid">
       <article class="panel status-panel">
         <div class="section-heading"><div><p class="eyebrow">LIVE STATUS</p><h2>系统状态</h2></div><span id="updated-at" class="muted">--</span></div>
+        <div class="window-summary"><span id="morning-window-summary" class="muted">每日随机窗口：读取中</span><button id="edit-morning-window" class="ghost compact" type="button">调整范围</button></div>
         <div class="status-grid">
           <div class="status-item"><span>安卓设备</span><strong id="device-state">读取中</strong></div>
           <div class="status-item"><span>Appium</span><strong id="appium-state">读取中</strong></div>
@@ -116,6 +117,16 @@
       <div class="time-grid"><label>上班时间<input id="clock-in" type="time" step="60"></label><label>下班时间<input id="clock-out" type="time" step="60"></label></div>
       <div id="day-actual" class="alert subtle">实际记录：--</div>
       <button type="submit" class="primary wide">保存当天设置</button>
+    </form>
+  </dialog>
+
+  <dialog id="morning-window-dialog">
+    <form id="morning-window-form">
+      <div class="section-heading"><h2>每日上班随机窗口</h2><button type="button" id="close-morning-window" class="ghost">关闭</button></div>
+      <div class="time-grid"><label>开始时间<input id="window-start" type="time" step="60" required></label><label>截止时间<input id="window-end" type="time" step="60" required></label></div>
+      <p class="muted small">任务在开始时间启动，并从剩余窗口内随机选择打卡时间。单日精确计划优先；保存不改变已经生成的本次计划。截止时间需早于 23:55，范围不可跨天。</p>
+      <p id="morning-window-error" class="bad" role="alert"></p>
+      <button id="save-morning-window" type="submit" class="primary wide">保存并同步每日任务</button>
     </form>
   </dialog>
 

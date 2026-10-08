@@ -10,12 +10,14 @@ import subprocess
 import sys
 import threading
 import webbrowser
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 import tkinter as tk
 from tkinter import messagebox, ttk
 
 from attendance_hub.core.app_config import load_app_config
+from attendance_hub.core.morning_window import MorningWindow, load_morning_window
+from attendance_hub.morning_schedule import update_morning_window
 from attendance_hub.core.attendance_history import (
     events_for_date,
     import_existing_logs,
@@ -392,7 +394,7 @@ def next_actual_clock_in_date(
         "skipped",
     }
 
-    window_end = datetime.combine(today, time(9, 30))
+    window_end = datetime.combine(today, load_morning_window().end_time)
     if plan_is_finished or (now > window_end and not plan_is_active):
         first_candidate = today + timedelta(days=1)
     else:
@@ -444,6 +446,7 @@ class ControlPanel:
         self.calendar_window: tk.Toplevel | None = None
         self.history_window: tk.Toplevel | None = None
         self.daily_plan_window: tk.Toplevel | None = None
+        self.morning_window_dialog: tk.Toplevel | None = None
         self.calendar_sync_running = False
         self.history_initialized = False
         self.calendar_selected_date = date.today()
@@ -685,6 +688,7 @@ class ControlPanel:
         self.morning_plan_label = self._status_row(card, "本次计划")
         self.last_result_label = self._status_row(card, "上次结果")
         self.calendar_today_label = self._status_row(card, "今日日历")
+        self.morning_window_label = self._status_row(card, "每日随机窗口")
 
         actions = tk.Frame(card, bg=COLORS["panel"])
         actions.pack(fill="x", padx=18, pady=(13, 17))
@@ -701,6 +705,7 @@ class ControlPanel:
             self.toggle_task,
         )
         self.toggle_button.pack(side="left")
+        self._button(actions, "调整范围", self.edit_morning_window).pack(side="left", padx=(8, 0))
 
     def _build_device_card(self, parent):
         card = self._card(parent, "设备与服务", 0, 1)
@@ -1459,6 +1464,11 @@ class ControlPanel:
         self.events.put(("status", status))
 
     def _apply_status(self, status: dict):
+        try:
+            window = load_morning_window()
+            self._set_status(self.morning_window_label, f"{window.start}–{window.end}")
+        except Exception:
+            self._set_status(self.morning_window_label, "配置读取失败", "danger")
         task = status["task"]
         self.task_exists = bool(task.get("Exists"))
         task_state = task.get("State", "Not installed")
@@ -1620,6 +1630,17 @@ class ControlPanel:
                 elif kind == "action_done":
                     self.append_log(str(payload))
                     self.refresh_status()
+                elif kind == "morning_window_done":
+                    ok, message = payload
+                    if self.morning_window_dialog and self.morning_window_dialog.winfo_exists():
+                        self.morning_window_save_button.configure(state="normal")
+                        if ok:
+                            self.morning_window_dialog.destroy()
+                            self.morning_window_dialog = None
+                        else:
+                            self.morning_window_error.configure(text=message)
+                    self.append_log(message)
+                    self.refresh_status()
                 elif kind == "calendar_sync_done":
                     self._apply_calendar_sync_result(payload)
                 elif kind == "clock_out_done":
@@ -1640,6 +1661,61 @@ class ControlPanel:
             return
         self.append_log("Installing or updating the daily scheduled task...")
         threading.Thread(target=self._install_task_worker, daemon=True).start()
+
+    def edit_morning_window(self):
+        if self.morning_window_dialog and self.morning_window_dialog.winfo_exists():
+            self.morning_window_dialog.lift()
+            return
+        try:
+            current = load_morning_window()
+        except Exception as exc:
+            messagebox.showerror("配置读取失败", str(exc))
+            return
+        dialog = tk.Toplevel(self.root)
+        self.morning_window_dialog = dialog
+        dialog.title("每日上班随机窗口")
+        dialog.geometry("480x320")
+        dialog.configure(bg=COLORS["panel"])
+        dialog.transient(self.root)
+        body = tk.Frame(dialog, bg=COLORS["panel"])
+        body.pack(fill="both", expand=True, padx=20, pady=18)
+        variables = []
+        for label, value in (("开始时间", current.start), ("截止时间", current.end)):
+            row = tk.Frame(body, bg=COLORS["panel"])
+            row.pack(fill="x", pady=7)
+            tk.Label(row, text=label, fg=COLORS["text"], bg=COLORS["panel"]).pack(side="left", padx=(0, 18))
+            hour, minute = value.split(":")
+            hour_var, minute_var = tk.StringVar(value=hour), tk.StringVar(value=minute)
+            variables.append((hour_var, minute_var))
+            self._clock_out_spinbox(row, hour_var, 0, 23, 5, "%02.0f").pack(side="left")
+            tk.Label(row, text=":", fg=COLORS["text"], bg=COLORS["panel"]).pack(side="left", padx=5)
+            self._clock_out_spinbox(row, minute_var, 0, 59, 5, "%02.0f").pack(side="left")
+        tk.Label(body, text="保存后同步现有每日任务，已生成的本次计划保持原时间。\n单日精确计划优先；范围不可跨天，截止时间需早于 23:55。",
+                 fg=COLORS["muted"], bg=COLORS["panel"], justify="left", wraplength=425).pack(anchor="w", pady=(12, 6))
+        self.morning_window_error = tk.Label(body, text="", fg=COLORS["danger"], bg=COLORS["panel"], wraplength=425)
+        self.morning_window_error.pack(anchor="w")
+
+        def save():
+            try:
+                values = [f"{int(h.get()):02d}:{int(m.get()):02d}" for h, m in variables]
+                candidate = MorningWindow(start=values[0], end=values[1])
+            except (ValueError, TypeError):
+                self.morning_window_error.configure(text="请输入有效时间，开始需早于截止，截止需早于 23:55。")
+                return
+            self.morning_window_save_button.configure(state="disabled")
+
+            def worker():
+                try:
+                    update_morning_window(candidate.start, candidate.end, PROJECT_DIR, TASK_NAME)
+                    result = (True, f"Daily random window saved: {candidate.start}-{candidate.end}.")
+                except Exception as exc:
+                    result = (False, str(exc))
+                self.events.put(("morning_window_done", result))
+
+            threading.Thread(target=worker, daemon=True).start()
+
+        self.morning_window_save_button = self._button(body, "保存并同步每日任务", save, primary=True)
+        self.morning_window_save_button.pack(anchor="w", pady=(10, 0))
 
     def _install_task_worker(self):
         result = powershell_command(["-File", str(INSTALL_SCRIPT)], timeout=60)
@@ -1851,7 +1927,7 @@ class ControlPanel:
             "程序将立即打开飞书并检查上班状态：\n"
             "• 如果极速打卡已经成功，只核验并退出\n"
             "• 如果确认尚未上班打卡，点击上班打卡按钮\n\n"
-            "这是手动操作，会绕过工作日和 09:00–09:30 时间限制，"
+            "这是手动操作，会绕过工作日和默认随机窗口限制，"
             "并可能写入真实打卡记录。是否继续？",
             icon="warning",
         )
@@ -2830,7 +2906,7 @@ class ControlPanel:
         tk.Label(
             container,
             text=(
-                "精确上班时间会替代当天 09:00–09:30 的随机计划；"
+                "精确上班时间会替代当天的默认随机计划；"
                 "精确下班时间与主界面定时下班使用同一计划，后来保存的值生效。"
             ),
             font=("Microsoft YaHei UI", 9),

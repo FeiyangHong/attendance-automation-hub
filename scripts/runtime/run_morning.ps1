@@ -35,10 +35,12 @@ else {
     "$SourceDir;$env:PYTHONPATH"
 }
 
-$WindowStartHour = 9
-$WindowStartMinute = 0
-$WindowEndHour = 9
-$WindowEndMinute = 30
+. (Join-Path $PSScriptRoot "morning_window.ps1")
+$window = Get-MorningWindow -ProjectDir $ProjectDir
+$WindowStartHour = $window.StartHour
+$WindowStartMinute = $window.StartMinute
+$WindowEndHour = $window.EndHour
+$WindowEndMinute = $window.EndMinute
 $RetryDelaySeconds = 15
 $MaxAttempts = 3
 
@@ -628,13 +630,13 @@ try {
     }
     else {
         if ($now -gt $windowEnd) {
-            Write-Log "Current time is after 09:30; today's morning flow is skipped."
+            Write-Log "Current time is after $($window.EndText); today's morning flow is skipped."
             Write-MorningPlan -Status "skipped" -Message "Started after the daily window."
             exit 0
         }
 
-        # Before 09:00, randomize across the full 09:00-09:30 window.
-        # After 09:00, randomize only across now-09:30.
+        # Before the opening, use the full configured window.
+        # After the opening, randomize only across the remaining window.
         if ($now -lt $windowStart) {
             $randomRangeStart = $windowStart
         }
@@ -681,9 +683,9 @@ try {
         exit 5
     }
 
-    # Do not clock in if the machine resumes after 09:30.
+    # Do not clock in if the machine resumes after the configured deadline.
     if ((-not $TestMode) -and (-not $isExplicitClockIn) -and (-not $customDailyClockIn) -and ((Get-Date) -gt $windowEnd)) {
-        Write-Log "The machine resumed after 09:30; today's morning flow is skipped."
+        Write-Log "The machine resumed after $($window.EndText); today's morning flow is skipped."
         Write-MorningPlan `
             -Status "skipped" `
             -TargetTime $targetTime `
@@ -757,7 +759,7 @@ try {
         }
 
         if ((-not $isExplicitClockIn) -and (-not $customDailyClockIn) -and ((Get-Date) -ge $windowEnd)) {
-            Write-Log "Flow failed and the 09:30 deadline has been reached; stopping retries."
+            Write-Log "Flow failed and the $($window.EndText) deadline has been reached; stopping retries."
             Write-MorningPlan `
                 -Status "failed" `
                 -TargetTime $targetTime `

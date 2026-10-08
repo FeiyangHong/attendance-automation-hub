@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import calendar
 import json
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from .core.attendance_history import month_records, record_for_date
 from .core.daily_plans import day_plan, month_plans, set_day_plan
 from .core.holiday_sync import load_official_calendar, sync_year
+from .core.morning_window import MorningWindow, load_morning_window
 
 from .settings import PROJECT_DIR
 
@@ -148,17 +149,25 @@ def synchronize_year(year: int) -> dict[str, Any]:
 def next_execution_date(
     reference: datetime | None = None,
     morning_plan: dict[str, Any] | None = None,
+    window: MorningWindow | None = None,
 ) -> dict[str, Any]:
     now = reference or datetime.now().astimezone()
     today = now.date()
     plan = morning_plan or {}
+    window = window or load_morning_window()
+    active_today = (
+        str(plan.get("date", "")) == today.isoformat()
+        and str(plan.get("status", "")) in {"waiting", "running"}
+    )
     finished_today = (
         str(plan.get("date", "")) == today.isoformat()
         and str(plan.get("status", "")) in {"success", "failed", "skipped"}
     )
     first = today
     today_exact = day_plan(today)
-    if finished_today or (not today_exact.get("clock_in") and now.time() > time(9, 30)):
+    if finished_today or (
+        not active_today and not today_exact.get("clock_in") and now.time() > window.end_time
+    ):
         first += timedelta(days=1)
     for offset in range(732):
         candidate = first + timedelta(days=offset)

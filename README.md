@@ -132,17 +132,25 @@ after sign-in:
 Start-ScheduledTask -TaskName "Attendance Automation Hub Web"
 ```
 
-The daily task starts at 09:00 and randomly selects an actual time from the remaining
-window through 09:30. Weekends and statutory holidays are skipped by default, while
-official adjusted working days run normally. If the computer resumes after 09:00 but
-before 09:30, the task still calculates a time within the remaining window; it does not
-make up the clock-in after 09:30. The scheduled task requires the user to remain signed
+The daily task starts at the configured opening (default 09:00) and randomly selects
+an actual time from the remaining window through its deadline (default 09:30).
+Weekends and statutory holidays are skipped by default, while official adjusted
+working days run normally. If the computer resumes after the opening but before the
+deadline, the task still calculates a time within the remaining window; it does not
+make up the clock-in after the deadline. The scheduled task requires the user to remain signed
 in. Locking the screen is fine; signing out is not.
+
+The default window is `09:00–09:30`. Change it using **系统状态 → 调整范围** on the Web
+dashboard or **每日自动化 → 调整范围** on the desktop panel. Saving updates the start
+time of the existing daily task. Exact per-day plans take priority, and an already
+generated target keeps its original time. The window must stay within one day and end
+before `23:55`. Settings are stored in `config\morning_window.json`; without this file,
+the default window applies.
 
 After a computer restart, the Tailscale service starts with Windows, the Web service
 starts when this Windows user signs in, and the daily task remains scheduled. The daily
 task does not wake a powered-off or sleeping computer. For the first verification, keep
-the computer powered on and signed in before 09:00.
+the computer powered on and signed in before the configured opening.
 
 ## 5. Commands
 

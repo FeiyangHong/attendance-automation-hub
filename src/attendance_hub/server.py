@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .core.app_config import load_app_config
+from .core.morning_window import load_morning_window
 from .core.attendance_history import (
     events_for_date,
     month_records,
@@ -36,6 +37,7 @@ from .calendar_service import (
     update_override,
 )
 from .jobs import JOB_KINDS, SENSITIVE_JOB_KINDS, JobManager, JobRejected
+from .morning_schedule import update_morning_window
 from .security import new_csrf_token, new_session_token, verify_password
 from .paths import PACKAGE_DIR
 from .settings import RemoteSettings, load_remote_settings
@@ -69,6 +71,11 @@ class CalendarOverrideUpdate(BaseModel):
 class DayPlanUpdate(BaseModel):
     clock_in: str = ""
     clock_out: str = ""
+
+
+class MorningWindowUpdate(BaseModel):
+    start: str
+    end: str
 
 
 class LoginLimiter:
@@ -301,6 +308,28 @@ def create_app(settings: RemoteSettings | None = None) -> FastAPI:
         _session: dict[str, Any] = Depends(require_api_session),
     ):
         return {"jobs": store.list_jobs(limit)}
+
+    @app.get("/api/settings/morning-window")
+    async def get_morning_window(_session: dict[str, Any] = Depends(require_api_session)):
+        return load_morning_window(settings.project_dir / "config" / "morning_window.json").as_dict()
+
+    @app.put("/api/settings/morning-window")
+    async def save_morning_window(
+        payload: MorningWindowUpdate,
+        request: Request,
+        session: dict[str, Any] = Depends(require_csrf),
+    ):
+        try:
+            result = await asyncio.to_thread(
+                update_morning_window, payload.start, payload.end,
+                settings.project_dir, settings.task_name,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail=f"保存失败，已保留原范围：{exc}") from exc
+        audit(request, session, "morning_window_update", details=result["window"])
+        return result
 
     @app.get("/api/jobs/{job_id}")
     async def get_job(

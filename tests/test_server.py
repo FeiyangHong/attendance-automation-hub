@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from attendance_hub.security import new_password_record
 from attendance_hub.server import SESSION_COOKIE, create_app
 from attendance_hub.settings import RemoteSettings
+from attendance_hub import morning_schedule
 
 
 def configured_settings(tmp_path):
@@ -84,3 +85,24 @@ def test_invalid_log_date_and_artifact_name(tmp_path):
         assert csrf
         assert client.get("/api/logs/not-a-date").status_code == 400
         assert client.get("/api/artifacts/not-allowed.txt").status_code == 400
+
+
+def test_morning_window_auth_validation_and_save(tmp_path, monkeypatch):
+    import subprocess
+
+    monkeypatch.setattr(
+        morning_schedule.subprocess, "run",
+        lambda command, **_kwargs: subprocess.CompletedProcess(command, 0, "updated", ""),
+    )
+    app = create_app(configured_settings(tmp_path))
+    path = "/api/settings/morning-window"
+    with TestClient(app) as client:
+        assert client.get(path).status_code == 401
+        csrf = login(client)
+        assert client.get(path).json() == {"start": "09:00", "end": "09:30"}
+        assert client.put(path, json={"start": "08:00", "end": "08:30"}).status_code == 403
+        headers = {"X-CSRF-Token": csrf}
+        assert client.put(path, headers=headers, json={"start": "09:00", "end": "08:00"}).status_code == 422
+        result = client.put(path, headers=headers, json={"start": "08:00", "end": "08:30"})
+        assert result.status_code == 200
+        assert client.get(path).json() == {"start": "08:00", "end": "08:30"}

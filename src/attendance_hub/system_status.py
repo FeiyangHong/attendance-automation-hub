@@ -12,6 +12,7 @@ from typing import Any
 from .core.app_config import load_app_config
 from .core.attendance_history import recent_records
 from .core.daily_plans import day_plan
+from .core.morning_window import load_morning_window
 
 from .calendar_service import day_status, next_execution_date
 from .settings import RemoteSettings
@@ -173,6 +174,7 @@ def status_snapshot(settings: RemoteSettings) -> dict[str, Any]:
     project = settings.project_dir
     today = date.today()
     morning_plan = _read_json(project / "config" / "morning_current_plan.json")
+    window = load_morning_window(project / "config" / "morning_window.json")
     return {
         "timestamp": datetime.now().astimezone().isoformat(timespec="seconds"),
         "device": _device_status(),
@@ -190,7 +192,8 @@ def status_snapshot(settings: RemoteSettings) -> dict[str, Any]:
             "plan": day_plan(today),
         },
         "morning_plan": morning_plan,
-        "next_execution": next_execution_date(morning_plan=morning_plan),
+        "morning_window": window.as_dict(),
+        "next_execution": next_execution_date(morning_plan=morning_plan, window=window),
         "clock_out_result": _read_json(project / "config" / "clock_out_last_result.json"),
         "recent_attendance": recent_records(7),
     }

@@ -95,6 +95,8 @@ function renderMorningProgress(plan, todayDate) {
 async function refreshStatus() {
   try {
     const data = await api('/api/status');
+    const window = data.morning_window || { start: '09:00', end: '09:30' };
+    document.getElementById('morning-window-summary').textContent = `每日随机窗口：${window.start}–${window.end}`;
     const device = data.device || {};
     setStatus('device-state', device.state === 'device' ? `${device.udid} · 已连接` : device.state || '未知', device.state === 'device' ? 'good' : device.state === 'disabled' ? 'warn' : 'bad');
     setStatus('appium-state', data.appium?.listening ? '运行中' : '未运行', data.appium?.listening ? 'good' : 'warn');
@@ -245,7 +247,33 @@ async function loadArtifacts() {
   } catch (error) { /* optional panel */ }
 }
 
+async function openMorningWindow() {
+  try {
+    const window = await api('/api/settings/morning-window');
+    document.getElementById('window-start').value = window.start;
+    document.getElementById('window-end').value = window.end;
+    document.getElementById('morning-window-error').textContent = '';
+    document.getElementById('morning-window-dialog').showModal();
+  } catch (error) { toast(error.message, true); }
+}
+
+async function saveMorningWindow(event) {
+  event.preventDefault();
+  const button = document.getElementById('save-morning-window');
+  button.disabled = true;
+  try {
+    await api('/api/settings/morning-window', { method: 'PUT', body: JSON.stringify({ start: document.getElementById('window-start').value, end: document.getElementById('window-end').value }) });
+    document.getElementById('morning-window-dialog').close();
+    toast('随机窗口已保存，已同步现有每日任务。');
+    await refreshStatus();
+  } catch (error) { document.getElementById('morning-window-error').textContent = error.message; }
+  finally { button.disabled = false; }
+}
+
 document.querySelectorAll('[data-job]').forEach(button => button.addEventListener('click', () => submitJob(button.dataset.job)));
+document.getElementById('edit-morning-window').addEventListener('click', openMorningWindow);
+document.getElementById('close-morning-window').addEventListener('click', () => document.getElementById('morning-window-dialog').close());
+document.getElementById('morning-window-form').addEventListener('submit', saveMorningWindow);
 document.getElementById('refresh-button').addEventListener('click', async () => { await Promise.all([refreshStatus(), refreshJobs(), loadCalendar(), loadArtifacts()]); toast('状态已刷新。'); });
 document.getElementById('logout-button').addEventListener('click', async () => { await api('/api/logout', { method: 'POST', body: '{}' }); location.href = '/login'; });
 document.getElementById('cancel-job').addEventListener('click', async () => { if (!state.activeJobId || !confirm('停止当前任务？')) return; try { await api(`/api/jobs/${state.activeJobId}/cancel`, { method: 'POST', body: '{}' }); toast('已请求停止任务。'); } catch (error) { toast(error.message, true); } });
